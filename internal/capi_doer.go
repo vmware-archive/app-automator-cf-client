@@ -35,6 +35,7 @@ func (c *CapiDoer) Do(method, path, body string) ([]byte, error) {
     }
 
     req.Header.Add("Authorization", token)
+    req.Header.Add("Content-Type", "application/json")
 
     resp, err := c.httpClient.Do(req)
     if err != nil {

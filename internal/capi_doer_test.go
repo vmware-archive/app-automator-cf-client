@@ -40,6 +40,7 @@ var _ = Describe("CapiDoer", func() {
             Method: http.MethodGet,
             Headers: http.Header{
                 "Authorization": {"bearer lemons"},
+                "Content-Type": {"application/json"},
             },
         })))
     })
