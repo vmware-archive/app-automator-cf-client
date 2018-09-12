@@ -7,6 +7,7 @@ import (
     . "github.com/onsi/ginkgo/extensions/table"
     "net/http"
     "github.com/pkg/errors"
+    "github.com/pivotal-cf/eats-cf-client/models"
 )
 
 var _ = Describe("Capi", func() {
@@ -28,7 +29,7 @@ var _ = Describe("Capi", func() {
             })
 
             Expect(err).ToNot(HaveOccurred())
-            Expect(apps).To(ConsistOf(internal.App{
+            Expect(apps).To(ConsistOf(models.App{
                 Guid: "app-guid",
             }))
         })
@@ -59,7 +60,7 @@ var _ = Describe("Capi", func() {
             process, err := c.Process("app-guid", "process-type")
             Expect(err).ToNot(HaveOccurred())
 
-            Expect(process).To(Equal(internal.Process{
+            Expect(process).To(Equal(models.Process{
                 Instances: 2,
             }))
         })

@@ -48,19 +48,6 @@ var _ = Describe("Client Integration", func() {
             ))
         })
 
-        It("gets process information", func() {
-            tc, teardown := setup()
-            defer teardown()
-
-            c := client.New(tc.env, username, password)
-            Expect(c.Scale("lemons", 2)).To(Succeed())
-
-            Expect(tc.getProcessVars).To(And(
-                HaveKeyWithValue("appGuid", "app-guid"),
-                HaveKeyWithValue("processType", "web"),
-            ))
-        })
-
         It("calls the scale process action with the new instance count", func() {
             tc, teardown := setup()
             defer teardown()
@@ -73,7 +60,37 @@ var _ = Describe("Client Integration", func() {
                 HaveKeyWithValue("processType", "web"),
             ))
 
-            Expect(tc.scaleBody).To(MatchJSON(`{ "instances": 5 }`))
+            Expect(tc.scaleBody).To(MatchJSON(`{ "instances": 2 }`))
+        })
+    })
+
+    Describe("Process()", func() {
+        It("gets app information", func() {
+            tc, teardown := setup()
+            defer teardown()
+
+            c := client.New(tc.env, username, password)
+            _, err := c.Process("lemons", "web")
+            Expect(err).ToNot(HaveOccurred())
+
+            Expect(tc.getAppsQuery).To(And(
+                HaveKeyWithValue("names", []string{"lemons"}),
+                HaveKeyWithValue("space_guids", []string{"space-guid"}),
+            ))
+        })
+
+        It("gets the process", func() {
+            tc, teardown := setup()
+            defer teardown()
+
+            c := client.New(tc.env, username, password)
+            _, err := c.Process("lemons", "web")
+            Expect(err).ToNot(HaveOccurred())
+
+            Expect(tc.getProcessVars).To(And(
+                HaveKeyWithValue("appGuid", "app-guid"),
+                HaveKeyWithValue("processType", "web"),
+            ))
         })
     })
 })

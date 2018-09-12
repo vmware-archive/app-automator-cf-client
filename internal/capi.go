@@ -5,6 +5,7 @@ import (
     "net/http"
     "net/url"
     "fmt"
+    "github.com/pivotal-cf/eats-cf-client/models"
 )
 
 type capiDoer func(method, path string, body string) ([]byte, error)
@@ -19,8 +20,8 @@ func NewCapiClient(doer capiDoer) *CapiClient {
     }
 }
 
-func (c *CapiClient) Apps(query map[string]string) ([]App, error) {
-    var appsResponse struct{ Resources []App `json:"resources"` }
+func (c *CapiClient) Apps(query map[string]string) ([]models.App, error) {
+    var appsResponse struct{ Resources []models.App `json:"resources"` }
     err := c.get("/v3/apps?"+buildQuery(query), &appsResponse)
     return appsResponse.Resources, err
 }
@@ -33,8 +34,8 @@ func buildQuery(values map[string]string) string {
     return query.Encode()
 }
 
-func (c *CapiClient) Process(appGuid, processType string) (Process, error) {
-    var p Process
+func (c *CapiClient) Process(appGuid, processType string) (models.Process, error) {
+    var p models.Process
     err := c.get(fmt.Sprintf("/v3/apps/%s/processes/%s", appGuid, processType), &p)
     return p, err
 }

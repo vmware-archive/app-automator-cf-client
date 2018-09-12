@@ -1,4 +1,4 @@
-package internal
+package models
 
 type App struct {
     Guid string `json:"guid"`

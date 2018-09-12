@@ -4,8 +4,9 @@ import (
     "net/http"
     "github.com/pivotal-cf/eats-cf-client/internal"
     "strings"
-    "fmt"
     "crypto/tls"
+    "github.com/pivotal-cf/eats-cf-client/models"
+    "fmt"
 )
 
 type Oauth interface {
@@ -13,8 +14,8 @@ type Oauth interface {
 }
 
 type Capi interface {
-    Apps(query map[string]string) ([]internal.App, error)
-    Process(appGuid, processType string) (internal.Process, error)
+    Apps(query map[string]string) ([]models.App, error)
+    Process(appGuid, processType string) (models.Process, error)
     Scale(appGuid, processType string, instanceCount uint) error
 }
 
@@ -52,26 +53,34 @@ func buildHttpClient(env Environment) *http.Client {
     }
 }
 
-func (c *Client) Scale(appName string, instanceDelta int) error {
+func (c *Client) Scale(appName string, instanceTarget uint) error {
+    appGuid, err := c.appGuid(appName)
+    if err != nil {
+        return err
+    }
+    return c.Capi.Scale(appGuid, "web", instanceTarget)
+}
+
+func (c *Client) appGuid(appName string) (string, error) {
     apps, err := c.Capi.Apps(map[string]string{
         "names":       appName,
         "space_guids": c.SpaceGuid,
     })
     if err != nil {
-        return err
+        return "", err
     }
 
     if len(apps) != 1 {
-        return fmt.Errorf("app %s not found in space %s", appName, c.SpaceGuid)
+        return "", fmt.Errorf("app %s not found in space %s", appName, c.SpaceGuid)
     }
 
-    process, err := c.Capi.Process(apps[0].Guid, "web")
+    return apps[0].Guid, nil
+}
+
+func (c *Client) Process(appName, processType string) (models.Process, error) {
+    appGuid, err := c.appGuid(appName)
     if err != nil {
-        return err
+        return models.Process{}, err
     }
-
-    //TODO shouldn't be negative
-    t := process.Instances + instanceDelta
-
-    return c.Capi.Scale(apps[0].Guid, "web", uint(t))
+    return c.Capi.Process(appGuid, processType)
 }
