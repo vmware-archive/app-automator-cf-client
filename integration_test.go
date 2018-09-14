@@ -5,14 +5,15 @@ import (
     "io/ioutil"
     "net/http"
     "net/http/httptest"
+    "net/url"
     "strings"
 
     "github.com/pivotal-cf/eats-cf-client"
+    "github.com/pivotal-cf/eats-cf-client/models"
 
     "github.com/gorilla/mux"
     . "github.com/onsi/ginkgo"
     . "github.com/onsi/gomega"
-    "net/url"
 )
 
 const (
@@ -23,14 +24,16 @@ const (
 
 type integrationTestContext struct {
     server *httptest.Server
-    env       client.Environment
+    env    client.Environment
 
-    infoCalled     int
     oauthCalled    int
     getAppsQuery   url.Values
     getProcessVars map[string]string
     scaleVars      map[string]string
-    scaleBody string
+    scaleBody      string
+
+    createTaskVars map[string]string
+    createTaskBody string
 }
 
 var _ = Describe("Client Integration", func() {
@@ -40,10 +43,10 @@ var _ = Describe("Client Integration", func() {
             defer teardown()
 
             c := client.New(tc.env, username, password)
+
             Expect(c.Scale("lemons", 2)).To(Succeed())
 
             Expect(tc.getAppsQuery).To(And(
-                HaveKeyWithValue("names", []string{"lemons"}),
                 HaveKeyWithValue("space_guids", []string{"space-guid"}),
             ))
         })
@@ -74,7 +77,6 @@ var _ = Describe("Client Integration", func() {
             Expect(err).ToNot(HaveOccurred())
 
             Expect(tc.getAppsQuery).To(And(
-                HaveKeyWithValue("names", []string{"lemons"}),
                 HaveKeyWithValue("space_guids", []string{"space-guid"}),
             ))
         })
@@ -91,6 +93,44 @@ var _ = Describe("Client Integration", func() {
                 HaveKeyWithValue("appGuid", "app-guid"),
                 HaveKeyWithValue("processType", "web"),
             ))
+        })
+    })
+
+    Describe("CreateTask()", func() {
+        It("gets app information", func() {
+            tc, teardown := setup()
+            defer teardown()
+
+            c := client.New(tc.env, username, password)
+            err := c.CreateTask("lemons", "command", models.TaskConfig{})
+            Expect(err).ToNot(HaveOccurred())
+
+            Expect(tc.getAppsQuery).To(And(
+                HaveKeyWithValue("space_guids", []string{"space-guid"}),
+            ))
+        })
+
+        It("creates the task", func() {
+            tc, teardown := setup()
+            defer teardown()
+
+            c := client.New(tc.env, username, password)
+            err := c.CreateTask("lemons", "command", models.TaskConfig{
+                Name:        "lemons",
+                DiskInMB:    7,
+                MemoryInMB:  30,
+                DropletGUID: "droplet-guid",
+            })
+            Expect(err).ToNot(HaveOccurred())
+
+            Expect(tc.createTaskVars).To(HaveKeyWithValue("appGuid", "app-guid"))
+            Expect(tc.createTaskBody).To(MatchJSON(`{
+                "command": "command",
+                "name": "lemons",
+                "disk_in_mb": 7,
+                "memory_in_mb": 30,
+                "droplet_guid": "droplet-guid"
+            }`))
         })
     })
 })
@@ -131,11 +171,12 @@ func setupCc(tc *integrationTestContext, router *mux.Router) {
     router.HandleFunc("/v3/apps", handleListApps(tc)).Methods(http.MethodGet)
     router.HandleFunc("/v3/apps/{appGuid}/processes/{processType}", handleGetProcess(tc)).Methods(http.MethodGet)
     router.HandleFunc("/v3/apps/{appGuid}/processes/{processType}/actions/scale", handleScale(tc)).Methods(http.MethodPost)
+    router.HandleFunc("/v3/apps/{appGuid}/tasks", handleTask(tc)).Methods(http.MethodPost)
 }
 
 func handleListApps(tc *integrationTestContext) http.HandlerFunc {
     return func(w http.ResponseWriter, req *http.Request) {
-        Expect(req.Header).To(HaveKeyWithValue("Authorization", []string{"bearer this-is-my-token"}))
+        Expect(req.Header).To(HaveKeyWithValue("Authorization", []string{token}))
 
         tc.getAppsQuery = req.URL.Query()
         w.Write([]byte(validAppsResponse))
@@ -144,7 +185,7 @@ func handleListApps(tc *integrationTestContext) http.HandlerFunc {
 
 func handleGetProcess(tc *integrationTestContext) http.HandlerFunc {
     return func(w http.ResponseWriter, req *http.Request) {
-        Expect(req.Header).To(HaveKeyWithValue("Authorization", []string{"bearer this-is-my-token"}))
+        Expect(req.Header).To(HaveKeyWithValue("Authorization", []string{token}))
 
         tc.getProcessVars = mux.Vars(req)
         w.Write([]byte(validProcessResponse))
@@ -165,8 +206,23 @@ func handleScale(tc *integrationTestContext) http.HandlerFunc {
     }
 }
 
+func handleTask(tc *integrationTestContext) http.HandlerFunc {
+    return func(w http.ResponseWriter, req *http.Request) {
+        Expect(req.Header).To(HaveKeyWithValue("Authorization", []string{token}))
+
+        tc.createTaskVars = mux.Vars(req)
+
+        body, err := ioutil.ReadAll(req.Body)
+        Expect(err).ToNot(HaveOccurred())
+        tc.createTaskBody = string(body)
+
+        w.WriteHeader(http.StatusCreated)
+    }
+}
+
 const validAppsResponse = `{
     "resources": [{
+        "name": "lemons",
         "guid": "app-guid"
     }]
 }`

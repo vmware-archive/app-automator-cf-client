@@ -1,12 +1,19 @@
 package client
 
 import (
-    "net/http"
-    "github.com/pivotal-cf/eats-cf-client/internal"
-    "strings"
     "crypto/tls"
+    "net/http"
+    "strings"
+
+    "github.com/pivotal-cf/eats-cf-client/internal"
     "github.com/pivotal-cf/eats-cf-client/models"
-    "fmt"
+)
+
+const (
+    defaultTaskMemory = 10
+    defaultTaskDisk   = 20
+
+    defaultProcessType = "web"
 )
 
 type Oauth interface {
@@ -17,14 +24,20 @@ type Capi interface {
     Apps(query map[string]string) ([]models.App, error)
     Process(appGuid, processType string) (models.Process, error)
     Scale(appGuid, processType string, instanceCount uint) error
+    CreateTask(appGuid, command string, cfg models.TaskConfig) error
+}
+
+type AppGuidCache interface {
+    TryWithRefresh(appName string, f func(appGuid string) error) error
 }
 
 type Client struct {
     CloudControllerUrl string
     SpaceGuid          string
 
-    Oauth Oauth
-    Capi  Capi
+    Oauth        Oauth
+    Capi         Capi
+    AppGuidCache AppGuidCache
 }
 
 func New(env Environment, username, password string) *Client {
@@ -33,12 +46,15 @@ func New(env Environment, username, password string) *Client {
     tokenEndpoint := strings.Replace(env.CloudControllerApi, "api", "login", 1)
     oauth := internal.NewOauthClient(httpClient, tokenEndpoint, username, password)
 
+    capi := internal.NewCapiClient(internal.NewCapiDoer(httpClient, env.CloudControllerApi, oauth.Token).Do)
+
     return &Client{
         CloudControllerUrl: env.CloudControllerApi,
         SpaceGuid:          env.VcapApplication.SpaceID,
 
-        Oauth: oauth,
-        Capi:  internal.NewCapiClient(internal.NewCapiDoer(httpClient, env.CloudControllerApi, oauth.Token).Do),
+        Oauth:        oauth,
+        Capi:         capi,
+        AppGuidCache: internal.NewAppGuidCache(capi.Apps, env.VcapApplication.SpaceID),
     }
 }
 
@@ -54,33 +70,33 @@ func buildHttpClient(env Environment) *http.Client {
 }
 
 func (c *Client) Scale(appName string, instanceTarget uint) error {
-    appGuid, err := c.appGuid(appName)
-    if err != nil {
-        return err
-    }
-    return c.Capi.Scale(appGuid, "web", instanceTarget)
-}
-
-func (c *Client) appGuid(appName string) (string, error) {
-    apps, err := c.Capi.Apps(map[string]string{
-        "names":       appName,
-        "space_guids": c.SpaceGuid,
+    return c.AppGuidCache.TryWithRefresh(appName, func(appGuid string) error {
+        return c.Capi.Scale(appGuid, defaultProcessType, instanceTarget)
     })
-    if err != nil {
-        return "", err
-    }
-
-    if len(apps) != 1 {
-        return "", fmt.Errorf("app %s not found in space %s", appName, c.SpaceGuid)
-    }
-
-    return apps[0].Guid, nil
 }
 
 func (c *Client) Process(appName, processType string) (models.Process, error) {
-    appGuid, err := c.appGuid(appName)
-    if err != nil {
-        return models.Process{}, err
+    var proc models.Process
+    var err error
+    err = c.AppGuidCache.TryWithRefresh(appName, func(appGuid string) error {
+        proc, err = c.Capi.Process(appGuid, processType)
+        return err
+    })
+    return proc, err
+}
+
+func (c *Client) CreateTask(appName, command string, cfg models.TaskConfig) error {
+    if cfg.MemoryInMB == 0 {
+        cfg.MemoryInMB = defaultTaskMemory
     }
-    return c.Capi.Process(appGuid, processType)
+
+    if cfg.DiskInMB == 0 {
+        cfg.DiskInMB = defaultTaskDisk
+    }
+    if cfg.Name == "" {
+        cfg.Name = command
+    }
+    return c.AppGuidCache.TryWithRefresh(appName, func(appGuid string) error {
+        return c.Capi.CreateTask(appGuid, command, cfg)
+    })
 }

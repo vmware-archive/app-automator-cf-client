@@ -3,16 +3,16 @@ package client
 import (
     "code.cloudfoundry.org/go-envstruct"
     "encoding/json"
-    "time"
     "log"
+    "time"
 )
 
 // Environment holds configuration for the schedule-observer
 type Environment struct {
-    CloudControllerApi   string          `env:"API_URL"`
-    HttpTimeout          time.Duration   `env:"HTTP_TIMEOUT"`
-    SkipSslValidation    bool            `env:"SKIP_SSL_VALIDATION"`
-    VcapApplication      VcapApplication `env:"VCAP_APPLICATION, required"`
+    CloudControllerApi string          `env:"API_URL"`
+    HttpTimeout        time.Duration   `env:"HTTP_TIMEOUT"`
+    SkipSslValidation  bool            `env:"SKIP_SSL_VALIDATION"`
+    VcapApplication    VcapApplication `env:"VCAP_APPLICATION, required"`
 }
 
 // VcapApplication is information provided by the Cloud Foundry runtime

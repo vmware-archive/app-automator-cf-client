@@ -1,15 +1,16 @@
 package internal_test
 
 import (
-    . "github.com/onsi/ginkgo"
-    . "github.com/onsi/gomega"
-    . "github.com/onsi/ginkgo/extensions/table"
-
-    "github.com/pivotal-cf/eats-cf-client/internal/mocks"
-    "github.com/pivotal-cf/eats-cf-client/internal"
-    "github.com/pkg/errors"
+    "errors"
     "net/http"
     "net/url"
+
+    "github.com/pivotal-cf/eats-cf-client/internal"
+    "github.com/pivotal-cf/eats-cf-client/internal/mocks"
+
+    . "github.com/onsi/ginkgo"
+    . "github.com/onsi/ginkgo/extensions/table"
+    . "github.com/onsi/gomega"
 )
 
 var _ = Describe("Oauth", func() {

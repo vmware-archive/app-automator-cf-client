@@ -1,9 +1,9 @@
 package internal
 
 import (
-    "net/http"
     "encoding/json"
     "fmt"
+    "net/http"
     "net/url"
     "strings"
 )

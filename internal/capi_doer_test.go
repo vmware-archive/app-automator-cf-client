@@ -1,14 +1,15 @@
 package internal_test
 
 import (
+    "errors"
+    "net/http"
+
+    "github.com/pivotal-cf/eats-cf-client/internal"
+    "github.com/pivotal-cf/eats-cf-client/internal/mocks"
+
     . "github.com/onsi/ginkgo"
     . "github.com/onsi/ginkgo/extensions/table"
     . "github.com/onsi/gomega"
-
-    "github.com/pivotal-cf/eats-cf-client/internal/mocks"
-    "github.com/pivotal-cf/eats-cf-client/internal"
-    "net/http"
-    "errors"
 )
 
 var _ = Describe("CapiDoer", func() {
@@ -40,7 +41,7 @@ var _ = Describe("CapiDoer", func() {
             Method: http.MethodGet,
             Headers: http.Header{
                 "Authorization": {"bearer lemons"},
-                "Content-Type": {"application/json"},
+                "Content-Type":  {"application/json"},
             },
         })))
     })

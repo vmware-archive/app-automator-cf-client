@@ -1,11 +1,12 @@
 package mocks
 
 import (
-    "net/http"
-    "io/ioutil"
-    "strings"
-    . "github.com/onsi/gomega"
     "io"
+    "io/ioutil"
+    "net/http"
+    "strings"
+
+    "github.com/onsi/gomega"
 )
 
 type HttpRequest struct {
@@ -25,9 +26,9 @@ type HttpClient struct {
 
 func NewHttpClient() *HttpClient {
     return &HttpClient{
-        Reqs: make(chan HttpRequest, 100),
-        Response:`{"access_token": "lemons", "token_type": "bearer"}`,
-        Status: http.StatusOK,
+        Reqs:     make(chan HttpRequest, 100),
+        Response: `{"access_token": "lemons", "token_type": "bearer"}`,
+        Status:   http.StatusOK,
     }
 }
 
@@ -36,7 +37,7 @@ func (c *HttpClient) Do(req *http.Request) (*http.Response, error) {
     var err error
     if req.Body != nil {
         body, err = ioutil.ReadAll(req.Body)
-        Expect(err).ToNot(HaveOccurred())
+        gomega.Expect(err).ToNot(gomega.HaveOccurred())
     }
 
     c.Reqs <- HttpRequest{

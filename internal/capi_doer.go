@@ -1,9 +1,9 @@
 package internal
 
 import (
-    "net/http"
     "fmt"
     "io/ioutil"
+    "net/http"
     "strings"
 )
 

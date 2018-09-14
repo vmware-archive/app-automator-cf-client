@@ -1,13 +1,15 @@
 package internal_test
 
 import (
-    . "github.com/onsi/ginkgo"
-    "github.com/pivotal-cf/eats-cf-client/internal"
-    . "github.com/onsi/gomega"
-    . "github.com/onsi/ginkgo/extensions/table"
+    "errors"
     "net/http"
-    "github.com/pkg/errors"
+
+    "github.com/pivotal-cf/eats-cf-client/internal"
     "github.com/pivotal-cf/eats-cf-client/models"
+
+    . "github.com/onsi/ginkgo"
+    . "github.com/onsi/ginkgo/extensions/table"
+    . "github.com/onsi/gomega"
 )
 
 var _ = Describe("Capi", func() {
@@ -99,6 +101,43 @@ var _ = Describe("Capi", func() {
         DescribeTable("errors", func(do func(method, path string, body string) ([]byte, error)) {
             c := internal.NewCapiClient(do)
             Expect(c.Scale("app-guid", "process-type", 5)).ToNot(Succeed())
+        },
+            Entry("do returns an error", func(method, path string, body string) ([]byte, error) {
+                return nil, errors.New("expected")
+            }),
+        )
+    })
+
+    Describe("CreateTask()", func() {
+        It("creates a task", func() {
+            var called bool
+            c := internal.NewCapiClient(func(method, path string, body string) ([]byte, error) {
+                called = true
+                Expect(method).To(Equal(http.MethodPost))
+                Expect(path).To(Equal("/v3/apps/app-guid/tasks"))
+                Expect(body).To(MatchJSON(`{
+                    "command": "echo test",
+                    "name": "lemons",
+                    "disk_in_mb": 7,
+                    "memory_in_mb": 30,
+                    "droplet_guid": "droplet-guid"
+                }`))
+                return nil, nil
+            })
+
+            err := c.CreateTask("app-guid", "echo test", models.TaskConfig{
+                Name:        "lemons",
+                DiskInMB:    7,
+                MemoryInMB:  30,
+                DropletGUID: "droplet-guid",
+            })
+            Expect(err).ToNot(HaveOccurred())
+            Expect(called).To(BeTrue())
+        })
+
+        DescribeTable("errors", func(do func(method, path string, body string) ([]byte, error)) {
+            c := internal.NewCapiClient(do)
+            Expect(c.CreateTask("app-guid", "command", models.TaskConfig{})).ToNot(Succeed())
         },
             Entry("do returns an error", func(method, path string, body string) ([]byte, error) {
                 return nil, errors.New("expected")

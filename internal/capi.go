@@ -2,9 +2,10 @@ package internal
 
 import (
     "encoding/json"
+    "fmt"
     "net/http"
     "net/url"
-    "fmt"
+
     "github.com/pivotal-cf/eats-cf-client/models"
 )
 
@@ -21,7 +22,9 @@ func NewCapiClient(doer capiDoer) *CapiClient {
 }
 
 func (c *CapiClient) Apps(query map[string]string) ([]models.App, error) {
-    var appsResponse struct{ Resources []models.App `json:"resources"` }
+    var appsResponse struct {
+        Resources []models.App `json:"resources"`
+    }
     err := c.get("/v3/apps?"+buildQuery(query), &appsResponse)
     return appsResponse.Resources, err
 }
@@ -55,4 +58,24 @@ func (c *CapiClient) get(path string, v interface{}) error {
     }
 
     return json.Unmarshal(resp, v)
+}
+
+func (c *CapiClient) CreateTask(appGuid, command string, cfg models.TaskConfig) error {
+    path := fmt.Sprintf("/v3/apps/%s/tasks", appGuid)
+
+    taskRequest := struct {
+        models.TaskConfig
+        Command string `json:"command"`
+    }{
+        TaskConfig: cfg,
+        Command:    command,
+    }
+
+    body, err := json.Marshal(&taskRequest)
+    if err != nil {
+        return err
+    }
+
+    _, err = c.Do(http.MethodPost, path, string(body))
+    return err
 }
