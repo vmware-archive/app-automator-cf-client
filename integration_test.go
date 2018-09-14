@@ -102,12 +102,13 @@ var _ = Describe("Client Integration", func() {
             defer teardown()
 
             c := client.Build(tc.env, username, password)
-            err := c.CreateTask("lemons", "command", models.TaskConfig{})
+            task, err := c.CreateTask("lemons", "command", models.TaskConfig{})
             Expect(err).ToNot(HaveOccurred())
 
             Expect(tc.getAppsQuery).To(And(
                 HaveKeyWithValue("space_guids", []string{"space-guid"}),
             ))
+            Expect(task.Guid).To(Equal("task-guid"))
         })
 
         It("creates the task", func() {
@@ -115,7 +116,7 @@ var _ = Describe("Client Integration", func() {
             defer teardown()
 
             c := client.Build(tc.env, username, password)
-            err := c.CreateTask("lemons", "command", models.TaskConfig{
+            _, err := c.CreateTask("lemons", "command", models.TaskConfig{
                 Name:        "lemons",
                 DiskInMB:    7,
                 MemoryInMB:  30,
@@ -217,6 +218,7 @@ func handleTask(tc *integrationTestContext) http.HandlerFunc {
         tc.createTaskBody = string(body)
 
         w.WriteHeader(http.StatusCreated)
+        w.Write([]byte(validTaskResponse))
     }
 }
 
@@ -228,3 +230,5 @@ const validAppsResponse = `{
 }`
 
 const validProcessResponse = `{ "instances": 3 }`
+
+const validTaskResponse = `{"guid": "task-guid"}`

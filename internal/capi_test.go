@@ -122,10 +122,10 @@ var _ = Describe("Capi", func() {
                     "memory_in_mb": 30,
                     "droplet_guid": "droplet-guid"
                 }`))
-                return nil, nil
+                return []byte(validTaskResponse), nil
             })
 
-            err := c.CreateTask("app-guid", "echo test", models.TaskConfig{
+            task, err := c.CreateTask("app-guid", "echo test", models.TaskConfig{
                 Name:        "lemons",
                 DiskInMB:    7,
                 MemoryInMB:  30,
@@ -133,14 +133,19 @@ var _ = Describe("Capi", func() {
             })
             Expect(err).ToNot(HaveOccurred())
             Expect(called).To(BeTrue())
+            Expect(task.Guid).To(Equal("task-guid"))
         })
 
         DescribeTable("errors", func(do func(method, path string, body string) ([]byte, error)) {
             c := internal.NewCapiClient(do)
-            Expect(c.CreateTask("app-guid", "command", models.TaskConfig{})).ToNot(Succeed())
+            _, err := c.CreateTask("app-guid", "command", models.TaskConfig{})
+            Expect(err).To(HaveOccurred())
         },
             Entry("do returns an error", func(method, path string, body string) ([]byte, error) {
                 return nil, errors.New("expected")
+            }),
+            Entry("do returns invalid json", func(method, path string, body string) ([]byte, error) {
+                return []byte("{]"), nil
             }),
         )
     })
@@ -148,3 +153,4 @@ var _ = Describe("Capi", func() {
 
 const validAppsResponse = `{"resources": [ { "guid": "app-guid" } ]}`
 const validProcessResponse = `{ "instances": 2 }`
+const validTaskResponse = `{"guid": "task-guid"}`

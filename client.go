@@ -24,7 +24,7 @@ type Capi interface {
     Apps(query map[string]string) ([]models.App, error)
     Process(appGuid, processType string) (models.Process, error)
     Scale(appGuid, processType string, instanceCount uint) error
-    CreateTask(appGuid, command string, cfg models.TaskConfig) error
+    CreateTask(appGuid, command string, cfg models.TaskConfig) (models.Task, error)
 }
 
 type AppGuidCache interface {
@@ -102,7 +102,7 @@ func (c *Client) Process(appName, processType string) (models.Process, error) {
     return proc, err
 }
 
-func (c *Client) CreateTask(appName, command string, cfg models.TaskConfig) error {
+func (c *Client) CreateTask(appName, command string, cfg models.TaskConfig) (models.Task, error) {
     if cfg.MemoryInMB == 0 {
         cfg.MemoryInMB = defaultTaskMemory
     }
@@ -113,7 +113,12 @@ func (c *Client) CreateTask(appName, command string, cfg models.TaskConfig) erro
     if cfg.Name == "" {
         cfg.Name = command
     }
-    return c.AppGuidCache.TryWithRefresh(appName, func(appGuid string) error {
-        return c.Capi.CreateTask(appGuid, command, cfg)
+
+    var task models.Task
+    var err error
+    err = c.AppGuidCache.TryWithRefresh(appName, func(appGuid string) error {
+        task, err = c.Capi.CreateTask(appGuid, command, cfg)
+        return err
     })
+    return task, err
 }

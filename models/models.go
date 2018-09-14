@@ -9,6 +9,10 @@ type Process struct {
     Instances int `json:"instances"`
 }
 
+type Task struct {
+    Guid string `json:"guid"`
+}
+
 type TaskConfig struct {
     Name        string `json:"name"`
     DiskInMB    uint   `json:"disk_in_mb"`

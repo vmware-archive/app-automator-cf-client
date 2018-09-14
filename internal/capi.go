@@ -60,7 +60,7 @@ func (c *CapiClient) get(path string, v interface{}) error {
     return json.Unmarshal(resp, v)
 }
 
-func (c *CapiClient) CreateTask(appGuid, command string, cfg models.TaskConfig) error {
+func (c *CapiClient) CreateTask(appGuid, command string, cfg models.TaskConfig) (models.Task, error) {
     path := fmt.Sprintf("/v3/apps/%s/tasks", appGuid)
 
     taskRequest := struct {
@@ -73,9 +73,16 @@ func (c *CapiClient) CreateTask(appGuid, command string, cfg models.TaskConfig) 
 
     body, err := json.Marshal(&taskRequest)
     if err != nil {
-        return err
+        return models.Task{}, err
     }
 
-    _, err = c.Do(http.MethodPost, path, string(body))
-    return err
+    resp, err := c.Do(http.MethodPost, path, string(body))
+    if err != nil {
+        return models.Task{}, err
+    }
+
+    var task models.Task
+    err = json.Unmarshal(resp, &task)
+
+    return task, err
 }

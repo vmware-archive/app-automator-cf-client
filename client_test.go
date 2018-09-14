@@ -102,7 +102,7 @@ var _ = Describe("Client", func() {
                 AppGuidCache: &mockAppGuidCache{},
             }
 
-            err := c.CreateTask("app-guid", "echo test", models.TaskConfig{
+            _, err := c.CreateTask("app-guid", "echo test", models.TaskConfig{
                 Name:        "lemons",
                 DiskInMB:    7,
                 DropletGUID: "droplet-guid",
@@ -121,7 +121,7 @@ var _ = Describe("Client", func() {
                 AppGuidCache: &mockAppGuidCache{},
             }
 
-            err := c.CreateTask("app-guid", "echo test", models.TaskConfig{
+            _, err := c.CreateTask("app-guid", "echo test", models.TaskConfig{
                 Name:        "lemons",
                 MemoryInMB:  7,
                 DropletGUID: "droplet-guid",
@@ -140,7 +140,7 @@ var _ = Describe("Client", func() {
                 AppGuidCache: &mockAppGuidCache{},
             }
 
-            err := c.CreateTask("app-guid", "echo test", models.TaskConfig{
+            _, err := c.CreateTask("app-guid", "echo test", models.TaskConfig{
                 DiskInMB:    10,
                 MemoryInMB:  10,
                 DropletGUID: "droplet-guid",
@@ -163,7 +163,7 @@ var _ = Describe("Client", func() {
                 AppGuidCache: cache,
             }
 
-            err := c.CreateTask("lemons", "command", models.TaskConfig{})
+            _, err := c.CreateTask("lemons", "command", models.TaskConfig{})
             Expect(err).To(HaveOccurred())
         },
             Entry("TryWithRefresh returns an error", func(capi *mockCapi, cache *mockAppGuidCache) {
@@ -209,9 +209,9 @@ func (c *mockCapi) Scale(appGuid, processType string, instanceCount uint) error 
     return c.scaleErr
 }
 
-func (c *mockCapi) CreateTask(appGuid, command string, cfg models.TaskConfig) error {
+func (c *mockCapi) CreateTask(appGuid, command string, cfg models.TaskConfig) (models.Task, error) {
     c.taskCfg = cfg
-    return c.taskErr
+    return models.Task{}, c.taskErr
 }
 
 type mockAppGuidCache struct {
