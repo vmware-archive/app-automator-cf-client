@@ -40,21 +40,38 @@ type Client struct {
     AppGuidCache AppGuidCache
 }
 
-func New(env Environment, username, password string) *Client {
+type Config struct {
+    CloudControllerUrl string
+    SpaceGuid          string
+    HttpClient         *http.Client
+    Username           string
+    Password           string
+}
+
+func Build(env Environment, username, password string) *Client {
     httpClient := buildHttpClient(env)
 
-    tokenEndpoint := strings.Replace(env.CloudControllerApi, "api", "login", 1)
-    oauth := internal.NewOauthClient(httpClient, tokenEndpoint, username, password)
-
-    capi := internal.NewCapiClient(internal.NewCapiDoer(httpClient, env.CloudControllerApi, oauth.Token).Do)
-
-    return &Client{
+    cfg := Config{
         CloudControllerUrl: env.CloudControllerApi,
         SpaceGuid:          env.VcapApplication.SpaceID,
+        HttpClient:         httpClient,
+        Username:           username,
+        Password:           password,
+    }
 
-        Oauth:        oauth,
-        Capi:         capi,
-        AppGuidCache: internal.NewAppGuidCache(capi.Apps, env.VcapApplication.SpaceID),
+    return New(cfg)
+}
+
+func New(cfg Config) *Client {
+    tokenEndpoint := strings.Replace(cfg.CloudControllerUrl, "api", "login", 1)
+    oauth := internal.NewOauthClient(cfg.HttpClient, tokenEndpoint, cfg.Username, cfg.Password)
+    capi := internal.NewCapiClient(internal.NewCapiDoer(cfg.HttpClient, cfg.CloudControllerUrl, oauth.Token).Do)
+    return &Client{
+        CloudControllerUrl: cfg.CloudControllerUrl,
+        SpaceGuid:          cfg.SpaceGuid,
+        Oauth:              oauth,
+        Capi:               capi,
+        AppGuidCache:       internal.NewAppGuidCache(capi.Apps, cfg.SpaceGuid),
     }
 }
 

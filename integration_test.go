@@ -42,7 +42,7 @@ var _ = Describe("Client Integration", func() {
             tc, teardown := setup()
             defer teardown()
 
-            c := client.New(tc.env, username, password)
+            c := client.Build(tc.env, username, password)
 
             Expect(c.Scale("lemons", 2)).To(Succeed())
 
@@ -55,7 +55,7 @@ var _ = Describe("Client Integration", func() {
             tc, teardown := setup()
             defer teardown()
 
-            c := client.New(tc.env, username, password)
+            c := client.Build(tc.env, username, password)
             Expect(c.Scale("lemons", 2)).To(Succeed())
 
             Expect(tc.scaleVars).To(And(
@@ -72,7 +72,7 @@ var _ = Describe("Client Integration", func() {
             tc, teardown := setup()
             defer teardown()
 
-            c := client.New(tc.env, username, password)
+            c := client.Build(tc.env, username, password)
             _, err := c.Process("lemons", "web")
             Expect(err).ToNot(HaveOccurred())
 
@@ -85,7 +85,7 @@ var _ = Describe("Client Integration", func() {
             tc, teardown := setup()
             defer teardown()
 
-            c := client.New(tc.env, username, password)
+            c := client.Build(tc.env, username, password)
             _, err := c.Process("lemons", "web")
             Expect(err).ToNot(HaveOccurred())
 
@@ -101,7 +101,7 @@ var _ = Describe("Client Integration", func() {
             tc, teardown := setup()
             defer teardown()
 
-            c := client.New(tc.env, username, password)
+            c := client.Build(tc.env, username, password)
             err := c.CreateTask("lemons", "command", models.TaskConfig{})
             Expect(err).ToNot(HaveOccurred())
 
@@ -114,7 +114,7 @@ var _ = Describe("Client Integration", func() {
             tc, teardown := setup()
             defer teardown()
 
-            c := client.New(tc.env, username, password)
+            c := client.Build(tc.env, username, password)
             err := c.CreateTask("lemons", "command", models.TaskConfig{
                 Name:        "lemons",
                 DiskInMB:    7,
