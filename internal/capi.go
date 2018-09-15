@@ -44,10 +44,10 @@ func (c *CapiClient) Process(appGuid, processType string) (models.Process, error
 }
 
 func (c *CapiClient) Scale(appGuid, processType string, instanceCount uint) error {
-    scalePath := fmt.Sprintf("/v3/apps/%s/processes/%s/actions/scale", appGuid, processType)
-    scaleBody := fmt.Sprintf(`{"instances": %d}`, instanceCount)
+    path := fmt.Sprintf("/v3/apps/%s/processes/%s/actions/scale", appGuid, processType)
+    body := fmt.Sprintf(`{"instances": %d}`, instanceCount)
 
-    _, err := c.Do(http.MethodPost, scalePath, scaleBody)
+    _, err := c.Do(http.MethodPost, path, body)
     return err
 }
 

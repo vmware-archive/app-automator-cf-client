@@ -92,6 +92,21 @@ var _ = Describe("Client", func() {
     })
 
     Describe("CreateTask()", func() {
+        It("uses TryWithRefresh", func() {
+            cache := &mockAppGuidCache{}
+            c := client.Client{
+                Oauth: &mockOauth{},
+                Capi: &mockCapi{
+                    apps: []models.App{{Guid: "app-guid", Name: "app-name"}},
+                },
+                AppGuidCache: cache,
+            }
+            task, err := c.CreateTask("app-name", "echo test", models.TaskConfig{})
+            Expect(err).ToNot(HaveOccurred())
+            Expect(cache.called).To(BeTrue())
+            Expect(task.Guid).To(Equal("task-guid"))
+        })
+
         It("defaults memory to 10M if not set", func() {
             capi := &mockCapi{
                 apps: []models.App{{Guid: "app-guid"}},
@@ -211,7 +226,7 @@ func (c *mockCapi) Scale(appGuid, processType string, instanceCount uint) error 
 
 func (c *mockCapi) CreateTask(appGuid, command string, cfg models.TaskConfig) (models.Task, error) {
     c.taskCfg = cfg
-    return models.Task{}, c.taskErr
+    return models.Task{Guid: "task-guid"}, c.taskErr
 }
 
 type mockAppGuidCache struct {
