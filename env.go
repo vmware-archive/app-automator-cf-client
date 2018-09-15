@@ -1,10 +1,11 @@
 package client
 
 import (
-    "code.cloudfoundry.org/go-envstruct"
     "encoding/json"
     "log"
     "time"
+
+    "code.cloudfoundry.org/go-envstruct"
 )
 
 // Environment holds configuration for the schedule-observer

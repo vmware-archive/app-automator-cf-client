@@ -86,3 +86,9 @@ func (c *CapiClient) CreateTask(appGuid, command string, cfg models.TaskConfig) 
 
     return task, err
 }
+
+func (c *CapiClient) Stop(appGuid string) error {
+    path := fmt.Sprintf("/v3/apps/%s/actions/stop", appGuid)
+    _, err := c.Do(http.MethodPost, path, "")
+    return err
+}

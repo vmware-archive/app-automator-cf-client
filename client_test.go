@@ -189,6 +189,46 @@ var _ = Describe("Client", func() {
             }),
         )
     })
+
+    Describe("Stop()", func() {
+        It("stops the app", func() {
+            cache := &mockAppGuidCache{}
+            c := client.Client{
+                Oauth: &mockOauth{},
+                Capi: &mockCapi{
+                    apps: []models.App{{Guid: "app-guid", Name: "app-name"}},
+                },
+                AppGuidCache: cache,
+            }
+            Expect(c.Stop("app-name")).To(Succeed())
+            Expect(cache.called).To(BeTrue())
+        })
+
+        DescribeTable("errors", func(modify func(*mockCapi, *mockAppGuidCache)) {
+            capi := &mockCapi{
+                apps:    []models.App{{Guid: "app-guid"}},
+                process: models.Process{Instances: 2},
+            }
+            cache := &mockAppGuidCache{}
+            modify(capi, cache)
+
+            c := client.Client{
+                Oauth:        &mockOauth{},
+                Capi:         capi,
+                AppGuidCache: cache,
+            }
+
+            err := c.Stop("lemons")
+            Expect(err).To(HaveOccurred())
+        },
+            Entry("TryWithRefresh returns an error", func(capi *mockCapi, cache *mockAppGuidCache) {
+                cache.tryErr = errors.New("expected")
+            }),
+            Entry("stop returns an error", func(capi *mockCapi, cache *mockAppGuidCache) {
+                capi.stopErr = errors.New("expected")
+            }),
+        )
+    })
 })
 
 type mockOauth struct {
@@ -207,6 +247,7 @@ type mockCapi struct {
     processErr error
 
     scaleErr error
+    stopErr  error
     taskErr  error
 
     taskCfg models.TaskConfig
@@ -227,6 +268,10 @@ func (c *mockCapi) Scale(appGuid, processType string, instanceCount uint) error 
 func (c *mockCapi) CreateTask(appGuid, command string, cfg models.TaskConfig) (models.Task, error) {
     c.taskCfg = cfg
     return models.Task{Guid: "task-guid"}, c.taskErr
+}
+
+func (c *mockCapi) Stop(appGuid string) error {
+    return c.stopErr
 }
 
 type mockAppGuidCache struct {

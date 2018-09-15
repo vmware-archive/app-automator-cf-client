@@ -149,6 +149,32 @@ var _ = Describe("Capi", func() {
             }),
         )
     })
+
+    Describe("Stop()", func() {
+        It("stops the process", func() {
+            var called bool
+            c := internal.NewCapiClient(func(method, path string, body string) ([]byte, error) {
+                called = true
+                Expect(method).To(Equal(http.MethodPost))
+                Expect(path).To(Equal("/v3/apps/app-guid/actions/stop"))
+                return nil, nil
+            })
+
+            err := c.Stop("app-guid")
+            Expect(err).ToNot(HaveOccurred())
+            Expect(called).To(BeTrue())
+        })
+
+        DescribeTable("errors", func(do func(method, path string, body string) ([]byte, error)) {
+            c := internal.NewCapiClient(do)
+            err := c.Stop("app-guid")
+            Expect(err).To(HaveOccurred())
+        },
+            Entry("do returns an error", func(method, path string, body string) ([]byte, error) {
+                return nil, errors.New("expected")
+            }),
+        )
+    })
 })
 
 const validAppsResponse = `{"resources": [ { "guid": "app-guid" } ]}`

@@ -25,6 +25,7 @@ type Capi interface {
     Process(appGuid, processType string) (models.Process, error)
     Scale(appGuid, processType string, instanceCount uint) error
     CreateTask(appGuid, command string, cfg models.TaskConfig) (models.Task, error)
+    Stop(appGuid string) error
 }
 
 type AppGuidCache interface {
@@ -121,4 +122,10 @@ func (c *Client) CreateTask(appName, command string, cfg models.TaskConfig) (mod
         return err
     })
     return task, err
+}
+
+func (c *Client) Stop(appName string) error {
+    return c.AppGuidCache.TryWithRefresh(appName, func(appGuid string) error {
+        return c.Capi.Stop(appGuid)
+    })
 }
