@@ -15,6 +15,7 @@ import (
 var _ = Describe("CapiDoer", func() {
     type testContext struct {
         httpClient  *mocks.HttpClient
+        getTokenCalls int
         getTokenErr error
     }
 
@@ -23,6 +24,7 @@ var _ = Describe("CapiDoer", func() {
             httpClient: mocks.NewHttpClient(),
         }
         client := internal.NewCapiDoer(tc.httpClient, "https://example.com", func() (string, error) {
+            tc.getTokenCalls++
             return "bearer lemons", tc.getTokenErr
         })
 
@@ -44,6 +46,33 @@ var _ = Describe("CapiDoer", func() {
                 "Content-Type":  {"application/json"},
             },
         })))
+    })
+
+    It("applies header options", func() {
+        client, tc := setup()
+
+        _, err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons", func(header *http.Header) {
+            header.Add("Limes", "grapefruit")
+        })
+        Expect(err).ToNot(HaveOccurred())
+
+        var req mocks.HttpRequest
+        Expect(tc.httpClient.Reqs).To(Receive(&req))
+        Expect(req.Headers).To(HaveKeyWithValue("Limes", []string{"grapefruit"}))
+    })
+
+    It("does not get auth token if provided in header options", func() {
+        client, tc := setup()
+
+        _, err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons", func(header *http.Header) {
+            header.Add("Authorization", "grapefruit")
+        })
+        Expect(err).ToNot(HaveOccurred())
+
+        var req mocks.HttpRequest
+        Expect(tc.httpClient.Reqs).To(Receive(&req))
+        Expect(tc.getTokenCalls).To(Equal(0))
+        Expect(req.Headers).To(HaveKeyWithValue("Authorization", []string{"grapefruit"}))
     })
 
     It("does not return an error if body is nil", func() {

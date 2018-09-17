@@ -23,19 +23,28 @@ func NewCapiDoer(httpClient httpClient, capiUrl string, tokenGetter tokenGetter)
     }
 }
 
-func (c *CapiDoer) Do(method, path, body string) ([]byte, error) {
+type HeaderOption func(header *http.Header)
+
+func (c *CapiDoer) Do(method, path, body string, opts ...HeaderOption) ([]byte, error) {
     req, err := http.NewRequest(method, c.capiUrl+path, ioutil.NopCloser(strings.NewReader(body)))
     if err != nil {
         return nil, err
     }
 
-    token, err := c.getToken()
-    if err != nil {
-        return nil, err
+    req.Header.Add("Content-Type", "application/json")
+
+    for _, o := range opts {
+        o(&req.Header)
     }
 
-    req.Header.Add("Authorization", token)
-    req.Header.Add("Content-Type", "application/json")
+    if _, ok := req.Header["Authorization"]; !ok {
+        token, err := c.getToken()
+        if err != nil {
+            return nil, err
+        }
+
+        req.Header.Add("Authorization", token)
+    }
 
     resp, err := c.httpClient.Do(req)
     if err != nil {

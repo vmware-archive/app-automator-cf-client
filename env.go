@@ -8,7 +8,7 @@ import (
     "code.cloudfoundry.org/go-envstruct"
 )
 
-// Environment holds configuration for the schedule-observer
+// Environment holds configuration
 type Environment struct {
     CloudControllerApi string          `env:"API_URL"`
     HttpTimeout        time.Duration   `env:"HTTP_TIMEOUT"`

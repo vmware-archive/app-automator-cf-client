@@ -17,14 +17,14 @@ const (
 )
 
 type Oauth interface {
-    Token() (string, error)
+    Token() (string, error) //TODO just a func?
 }
 
 type Capi interface {
     Apps(query map[string]string) ([]models.App, error)
     Process(appGuid, processType string) (models.Process, error)
     Scale(appGuid, processType string, instanceCount uint) error
-    CreateTask(appGuid, command string, cfg models.TaskConfig) (models.Task, error)
+    CreateTask(appGuid, command string, cfg models.TaskConfig, opts ...internal.HeaderOption) (models.Task, error)
     Stop(appGuid string) error
 }
 
@@ -47,11 +47,12 @@ type Config struct {
     HttpClient         *http.Client
     Username           string
     Password           string
+    TokenGetter func()(string,error)
 }
 
 func Build(username, password string) *Client {
     env := LoadEnv()
-    httpClient := buildHttpClient(env) //TODO test this configuration
+    httpClient := buildHttpClient(env)
 
     cfg := Config{
         CloudControllerUrl: env.CloudControllerApi,
@@ -105,7 +106,7 @@ func (c *Client) Process(appName, processType string) (models.Process, error) {
     return proc, err
 }
 
-func (c *Client) CreateTask(appName, command string, cfg models.TaskConfig) (models.Task, error) {
+func (c *Client) CreateTask(appName, command string, cfg models.TaskConfig, opts ...internal.HeaderOption) (models.Task, error) {
     if cfg.MemoryInMB == 0 {
         cfg.MemoryInMB = defaultTaskMemory
     }
@@ -120,7 +121,7 @@ func (c *Client) CreateTask(appName, command string, cfg models.TaskConfig) (mod
     var task models.Task
     var err error
     err = c.AppGuidCache.TryWithRefresh(appName, func(appGuid string) error {
-        task, err = c.Capi.CreateTask(appGuid, command, cfg)
+        task, err = c.Capi.CreateTask(appGuid, command, cfg, opts...)
         return err
     })
     return task, err

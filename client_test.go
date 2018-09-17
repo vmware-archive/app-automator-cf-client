@@ -2,6 +2,8 @@ package client_test
 
 import (
     "errors"
+    "github.com/pivotal-cf/eats-cf-client/internal"
+    "net/http"
 
     "github.com/pivotal-cf/eats-cf-client"
     "github.com/pivotal-cf/eats-cf-client/models"
@@ -164,6 +166,25 @@ var _ = Describe("Client", func() {
             Expect(capi.taskCfg.Name).To(Equal("echo test"))
         })
 
+        It("passes on header options", func() {
+            capi := &mockCapi{
+                apps: []models.App{{Guid: "app-guid"}},
+            }
+            c := client.Client{
+                Oauth:        &mockOauth{},
+                Capi:         capi,
+                AppGuidCache: &mockAppGuidCache{},
+            }
+
+            var headerOptionUsed bool
+            opt := func(header *http.Header) {
+                headerOptionUsed = true
+            }
+            _, err := c.CreateTask("app-guid", "echo test", models.TaskConfig{}, opt)
+            Expect(err).ToNot(HaveOccurred())
+            Expect(headerOptionUsed).To(BeTrue())
+        })
+
         DescribeTable("errors", func(modify func(*mockCapi, *mockAppGuidCache)) {
             capi := &mockCapi{
                 apps:    []models.App{{Guid: "app-guid"}},
@@ -250,7 +271,7 @@ type mockCapi struct {
     stopErr  error
     taskErr  error
 
-    taskCfg models.TaskConfig
+    taskCfg    models.TaskConfig
 }
 
 func (c *mockCapi) Apps(query map[string]string) ([]models.App, error) {
@@ -265,7 +286,10 @@ func (c *mockCapi) Scale(appGuid, processType string, instanceCount uint) error 
     return c.scaleErr
 }
 
-func (c *mockCapi) CreateTask(appGuid, command string, cfg models.TaskConfig) (models.Task, error) {
+func (c *mockCapi) CreateTask(appGuid, command string, cfg models.TaskConfig, opts ...internal.HeaderOption) (models.Task, error) {
+    for _, o := range opts {
+        o(&http.Header{})
+    }
     c.taskCfg = cfg
     return models.Task{Guid: "task-guid"}, c.taskErr
 }

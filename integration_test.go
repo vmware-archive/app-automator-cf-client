@@ -1,12 +1,14 @@
 package client_test
 
 import (
+    "crypto/tls"
     "fmt"
     "io/ioutil"
     "net/http"
     "net/http/httptest"
     "net/url"
     "strings"
+    "time"
 
     "github.com/pivotal-cf/eats-cf-client"
     "github.com/pivotal-cf/eats-cf-client/models"
@@ -23,8 +25,10 @@ const (
 )
 
 type integrationTestContext struct {
-    server *httptest.Server
-    cfg    client.Config
+    server            *httptest.Server
+    cfg               client.Config
+    httpTimeout       time.Duration
+    skipSslValidation bool
 
     oauthCalled    int
     getAppsQuery   url.Values
@@ -34,6 +38,7 @@ type integrationTestContext struct {
 
     createTaskVars map[string]string
     createTaskBody string
+    requestDelay   time.Duration
 }
 
 var _ = Describe("Client Integration", func() {
@@ -133,10 +138,24 @@ var _ = Describe("Client Integration", func() {
                 "droplet_guid": "droplet-guid"
             }`))
         })
+
+        It("times out", func() {
+            tc, teardown := setupWithTimeout(time.Microsecond)
+            defer teardown()
+
+            tc.requestDelay = time.Millisecond
+            c := client.New(tc.cfg)
+            _, err := c.CreateTask("lemons", "command", models.TaskConfig{})
+            Expect(err).To(HaveOccurred())
+        })
     })
 })
 
 func setup() (*integrationTestContext, func()) {
+    return setupWithTimeout(0)
+}
+
+func setupWithTimeout(timeout time.Duration) (*integrationTestContext, func()) {
     tc := &integrationTestContext{}
 
     router := mux.NewRouter()
@@ -150,7 +169,14 @@ func setup() (*integrationTestContext, func()) {
         SpaceGuid:          "space-guid",
         Username:           username,
         Password:           password,
-        HttpClient:         http.DefaultClient,
+        HttpClient: &http.Client{
+            Transport: &http.Transport{
+                TLSClientConfig: &tls.Config{
+                    InsecureSkipVerify: tc.skipSslValidation,
+                },
+            },
+            Timeout: timeout,
+        },
     }
 
     return tc, func() {
@@ -180,6 +206,8 @@ func handleListApps(tc *integrationTestContext) http.HandlerFunc {
     return func(w http.ResponseWriter, req *http.Request) {
         Expect(req.Header).To(HaveKeyWithValue("Authorization", []string{token}))
 
+        time.Sleep(tc.requestDelay)
+
         tc.getAppsQuery = req.URL.Query()
         w.Write([]byte(validAppsResponse))
     }
@@ -189,6 +217,8 @@ func handleGetProcess(tc *integrationTestContext) http.HandlerFunc {
     return func(w http.ResponseWriter, req *http.Request) {
         Expect(req.Header).To(HaveKeyWithValue("Authorization", []string{token}))
 
+        time.Sleep(tc.requestDelay)
+
         tc.getProcessVars = mux.Vars(req)
         w.Write([]byte(validProcessResponse))
     }
@@ -197,6 +227,8 @@ func handleGetProcess(tc *integrationTestContext) http.HandlerFunc {
 func handleScale(tc *integrationTestContext) http.HandlerFunc {
     return func(w http.ResponseWriter, req *http.Request) {
         Expect(req.Header).To(HaveKeyWithValue("Authorization", []string{token}))
+
+        time.Sleep(tc.requestDelay)
 
         tc.scaleVars = mux.Vars(req)
 
@@ -211,6 +243,8 @@ func handleScale(tc *integrationTestContext) http.HandlerFunc {
 func handleTask(tc *integrationTestContext) http.HandlerFunc {
     return func(w http.ResponseWriter, req *http.Request) {
         Expect(req.Header).To(HaveKeyWithValue("Authorization", []string{token}))
+
+        time.Sleep(tc.requestDelay)
 
         tc.createTaskVars = mux.Vars(req)
 
