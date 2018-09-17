@@ -2,7 +2,6 @@ package client_test
 
 import (
     "errors"
-    "github.com/pivotal-cf/eats-cf-client/internal"
     "net/http"
 
     "github.com/pivotal-cf/eats-cf-client"
@@ -286,7 +285,7 @@ func (c *mockCapi) Scale(appGuid, processType string, instanceCount uint) error 
     return c.scaleErr
 }
 
-func (c *mockCapi) CreateTask(appGuid, command string, cfg models.TaskConfig, opts ...internal.HeaderOption) (models.Task, error) {
+func (c *mockCapi) CreateTask(appGuid, command string, cfg models.TaskConfig, opts ...models.HeaderOption) (models.Task, error) {
     for _, o := range opts {
         o(&http.Header{})
     }

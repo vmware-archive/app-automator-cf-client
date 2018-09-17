@@ -2,6 +2,7 @@ package internal
 
 import (
     "fmt"
+    "github.com/pivotal-cf/eats-cf-client/models"
     "io/ioutil"
     "net/http"
     "strings"
@@ -23,9 +24,7 @@ func NewCapiDoer(httpClient httpClient, capiUrl string, tokenGetter tokenGetter)
     }
 }
 
-type HeaderOption func(header *http.Header)
-
-func (c *CapiDoer) Do(method, path, body string, opts ...HeaderOption) ([]byte, error) {
+func (c *CapiDoer) Do(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
     req, err := http.NewRequest(method, c.capiUrl+path, ioutil.NopCloser(strings.NewReader(body)))
     if err != nil {
         return nil, err

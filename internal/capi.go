@@ -9,7 +9,7 @@ import (
     "github.com/pivotal-cf/eats-cf-client/models"
 )
 
-type capiDoer func(method, path string, body string, opts ...HeaderOption) ([]byte, error)
+type capiDoer func(method, path string, body string, opts ...models.HeaderOption) ([]byte, error)
 
 type CapiClient struct {
     Do capiDoer
@@ -60,7 +60,7 @@ func (c *CapiClient) get(path string, v interface{}) error {
     return json.Unmarshal(resp, v)
 }
 
-func (c *CapiClient) CreateTask(appGuid, command string, cfg models.TaskConfig, opts ...HeaderOption) (models.Task, error) {
+func (c *CapiClient) CreateTask(appGuid, command string, cfg models.TaskConfig, opts ...models.HeaderOption) (models.Task, error) {
     path := fmt.Sprintf("/v3/apps/%s/tasks", appGuid)
 
     taskRequest := struct {

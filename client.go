@@ -24,7 +24,7 @@ type Capi interface {
     Apps(query map[string]string) ([]models.App, error)
     Process(appGuid, processType string) (models.Process, error)
     Scale(appGuid, processType string, instanceCount uint) error
-    CreateTask(appGuid, command string, cfg models.TaskConfig, opts ...internal.HeaderOption) (models.Task, error)
+    CreateTask(appGuid, command string, cfg models.TaskConfig, opts ...models.HeaderOption) (models.Task, error)
     Stop(appGuid string) error
 }
 
@@ -106,7 +106,7 @@ func (c *Client) Process(appName, processType string) (models.Process, error) {
     return proc, err
 }
 
-func (c *Client) CreateTask(appName, command string, cfg models.TaskConfig, opts ...internal.HeaderOption) (models.Task, error) {
+func (c *Client) CreateTask(appName, command string, cfg models.TaskConfig, opts ...models.HeaderOption) (models.Task, error) {
     if cfg.MemoryInMB == 0 {
         cfg.MemoryInMB = defaultTaskMemory
     }
