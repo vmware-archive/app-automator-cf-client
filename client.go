@@ -49,8 +49,9 @@ type Config struct {
     Password           string
 }
 
-func Build(env Environment, username, password string) *Client {
-    httpClient := buildHttpClient(env)
+func Build(username, password string) *Client {
+    env := LoadEnv()
+    httpClient := buildHttpClient(env) //TODO test this configuration
 
     cfg := Config{
         CloudControllerUrl: env.CloudControllerApi,
@@ -67,6 +68,7 @@ func New(cfg Config) *Client {
     tokenEndpoint := strings.Replace(cfg.CloudControllerUrl, "api", "login", 1)
     oauth := internal.NewOauthClient(cfg.HttpClient, tokenEndpoint, cfg.Username, cfg.Password)
     capi := internal.NewCapiClient(internal.NewCapiDoer(cfg.HttpClient, cfg.CloudControllerUrl, oauth.Token).Do)
+
     return &Client{
         CloudControllerUrl: cfg.CloudControllerUrl,
         SpaceGuid:          cfg.SpaceGuid,

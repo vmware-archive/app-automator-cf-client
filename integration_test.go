@@ -24,7 +24,7 @@ const (
 
 type integrationTestContext struct {
     server *httptest.Server
-    env    client.Environment
+    cfg    client.Config
 
     oauthCalled    int
     getAppsQuery   url.Values
@@ -42,7 +42,7 @@ var _ = Describe("Client Integration", func() {
             tc, teardown := setup()
             defer teardown()
 
-            c := client.Build(tc.env, username, password)
+            c := client.New(tc.cfg)
 
             Expect(c.Scale("lemons", 2)).To(Succeed())
 
@@ -55,7 +55,7 @@ var _ = Describe("Client Integration", func() {
             tc, teardown := setup()
             defer teardown()
 
-            c := client.Build(tc.env, username, password)
+            c := client.New(tc.cfg)
             Expect(c.Scale("lemons", 2)).To(Succeed())
 
             Expect(tc.scaleVars).To(And(
@@ -72,7 +72,7 @@ var _ = Describe("Client Integration", func() {
             tc, teardown := setup()
             defer teardown()
 
-            c := client.Build(tc.env, username, password)
+            c := client.New(tc.cfg)
             _, err := c.Process("lemons", "web")
             Expect(err).ToNot(HaveOccurred())
 
@@ -85,7 +85,7 @@ var _ = Describe("Client Integration", func() {
             tc, teardown := setup()
             defer teardown()
 
-            c := client.Build(tc.env, username, password)
+            c := client.New(tc.cfg)
             _, err := c.Process("lemons", "web")
             Expect(err).ToNot(HaveOccurred())
 
@@ -101,7 +101,7 @@ var _ = Describe("Client Integration", func() {
             tc, teardown := setup()
             defer teardown()
 
-            c := client.Build(tc.env, username, password)
+            c := client.New(tc.cfg)
             task, err := c.CreateTask("lemons", "command", models.TaskConfig{})
             Expect(err).ToNot(HaveOccurred())
 
@@ -115,7 +115,7 @@ var _ = Describe("Client Integration", func() {
             tc, teardown := setup()
             defer teardown()
 
-            c := client.Build(tc.env, username, password)
+            c := client.New(tc.cfg)
             _, err := c.CreateTask("lemons", "command", models.TaskConfig{
                 Name:        "lemons",
                 DiskInMB:    7,
@@ -145,11 +145,12 @@ func setup() (*integrationTestContext, func()) {
     setupCc(tc, router)
     tc.server.Start()
 
-    tc.env = client.Environment{
-        CloudControllerApi: tc.server.URL,
-        VcapApplication: client.VcapApplication{
-            SpaceID: "space-guid",
-        },
+    tc.cfg = client.Config{
+        CloudControllerUrl: tc.server.URL,
+        SpaceGuid:          "space-guid",
+        Username:           username,
+        Password:           password,
+        HttpClient:         http.DefaultClient,
     }
 
     return tc, func() {
