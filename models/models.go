@@ -14,8 +14,8 @@ type Task struct {
 }
 
 type TaskConfig struct {
-    Name        string `json:"name"`
-    DiskInMB    uint   `json:"disk_in_mb"`
-    MemoryInMB  uint   `json:"memory_in_mb"`
-    DropletGUID string `json:"droplet_guid"`
+    Name        string `json:"name,omitempty"`
+    DiskInMB    uint   `json:"disk_in_mb,omitempty"`
+    MemoryInMB  uint   `json:"memory_in_mb,omitempty"`
+    DropletGUID string `json:"droplet_guid,omitempty"`
 }
