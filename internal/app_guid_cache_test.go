@@ -175,8 +175,16 @@ var _ = Describe("Capi", func() {
         })
 
         It("retries if the function errors", func() {
+            var cacheCallCount int
             c := internal.NewAppGuidCache(
                 func(query map[string]string) ([]models.App, error) {
+                    cacheCallCount++
+                    if cacheCallCount == 1 {
+                        return []models.App{
+                            {Name: "lemons", Guid: "wrong-lemons-guid"},
+                        }, nil
+                    }
+
                     return []models.App{
                         {Name: "lemons", Guid: "lemons-guid"},
                     }, nil
@@ -184,14 +192,14 @@ var _ = Describe("Capi", func() {
                 "space-guid",
             )
 
-            var callCount int
+            var appGuids []string
             err := c.TryWithRefresh("lemons", func(appGuid string) error {
-                callCount++
+                appGuids = append(appGuids, appGuid)
                 return errors.New("expected")
             })
 
             Expect(err).To(HaveOccurred())
-            Expect(callCount).To(Equal(2))
+            Expect(appGuids).To(ConsistOf("wrong-lemons-guid", "lemons-guid"))
         })
 
         It("returns an error if app guids can't be fetched", func() {

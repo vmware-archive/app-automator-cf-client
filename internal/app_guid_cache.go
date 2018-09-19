@@ -76,14 +76,19 @@ func (c *AppGuidCache) Invalidate() {
 }
 
 func (c *AppGuidCache) TryWithRefresh(appName string, f func(appGuid string) error) error {
+    err := c.try(appName, f)
+    if err != nil {
+        c.Invalidate()
+        return c.try(appName, f)
+    }
+    return nil
+}
+
+func (c *AppGuidCache) try(appName string, f func(appGuid string) error) error {
     guid, err := c.Get(appName)
     if err != nil {
         return err
     }
 
-    err = f(guid)
-    if err != nil {
-        return f(guid)
-    }
-    return nil
+    return f(guid)
 }
