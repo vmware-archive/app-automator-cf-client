@@ -20,8 +20,10 @@ var _ = Describe("CapiDoer", func() {
     }
 
     var setup = func() (*internal.CapiDoer, *testContext) {
+        httpClient := mocks.NewHttpClient()
+        httpClient.Response = "body"
         tc := &testContext{
-            httpClient: mocks.NewHttpClient(),
+            httpClient: httpClient,
         }
         client := internal.NewCapiDoer(tc.httpClient, "https://example.com", func() (string, error) {
             tc.getTokenCalls++
@@ -88,7 +90,7 @@ var _ = Describe("CapiDoer", func() {
 
         body, err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons")
         Expect(err).ToNot(HaveOccurred())
-        Expect(string(body)).To(Equal(`{"access_token": "lemons", "token_type": "bearer"}`))
+        Expect(string(body)).To(Equal("body"))
     })
 
     DescribeTable("errors",

@@ -27,7 +27,7 @@ type HttpClient struct {
 func NewHttpClient() *HttpClient {
     return &HttpClient{
         Reqs:     make(chan HttpRequest, 100),
-        Response: `{"access_token": "lemons", "token_type": "bearer"}`,
+        Response: `{"access_token": "lemons", "token_type": "bearer", "expires_in": 86400}`,
         Status:   http.StatusOK,
     }
 }

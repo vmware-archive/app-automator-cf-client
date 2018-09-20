@@ -4,6 +4,7 @@ import (
     "errors"
     "net/http"
     "net/url"
+    "time"
 
     "github.com/pivotal-cf/eats-cf-client/internal"
     "github.com/pivotal-cf/eats-cf-client/internal/mocks"
@@ -27,47 +28,96 @@ var _ = Describe("Oauth", func() {
         return client, tc
     }
 
-    It("gets a token", func() {
-        client, tc := setup()
+    Describe("Token()", func() {
+        It("gets a token", func() {
+            client, tc := setup()
 
-        token, err := client.Token()
-        Expect(err).ToNot(HaveOccurred())
-        Expect(token).To(Equal("bearer lemons"))
+            token, err := client.Token()
+            Expect(err).ToNot(HaveOccurred())
+            Expect(token).To(Equal("bearer lemons"))
 
-        Expect(tc.httpClient.Reqs).To(Receive(Equal(mocks.HttpRequest{
-            Body: url.Values{
-                "client_id":     {"cf"},
-                "client_secret": {""},
-                "username":      {"admin"},
-                "password":      {"supersecret"},
-                "grant_type":    {"password"},
-                "response_type": {"token"},
-            }.Encode(),
-            Url:    "https://example.com/oauth/token",
-            Method: http.MethodPost,
-            Headers: http.Header{
-                "Content-Type": {"application/x-www-form-urlencoded"},
-                "Accept":       {"application/json"},
+            Expect(tc.httpClient.Reqs).To(Receive(Equal(mocks.HttpRequest{
+                Body: url.Values{
+                    "client_id":     {"cf"},
+                    "client_secret": {""},
+                    "username":      {"admin"},
+                    "password":      {"supersecret"},
+                    "grant_type":    {"password"},
+                    "response_type": {"token"},
+                }.Encode(),
+                Url:    "https://example.com/oauth/token",
+                Method: http.MethodPost,
+                Headers: http.Header{
+                    "Content-Type": {"application/x-www-form-urlencoded"},
+                    "Accept":       {"application/json"},
+                },
+            })))
+        })
+
+        DescribeTable("errors",
+            func(setupFunc func(*testContext)) {
+                client, tc := setup()
+                setupFunc(tc)
+
+                _, err := client.Token()
+                Expect(err).To(HaveOccurred())
             },
-        })))
+            Entry("httpClient errors", func(tc *testContext) {
+                tc.httpClient.Err = errors.New("expected error")
+            }),
+            Entry("token request returns unexpected status", func(tc *testContext) {
+                tc.httpClient.Status = http.StatusConflict
+            }),
+            Entry("oauth server returns invalid json", func(tc *testContext) {
+                tc.httpClient.Response = `im not json`
+            }),
+        )
     })
 
-    DescribeTable("errors",
-        func(setupFunc func(*testContext)) {
+    Describe("TokenWithExpiry()", func() {
+        It("gets a token", func() {
             client, tc := setup()
-            setupFunc(tc)
 
-            _, err := client.Token()
-            Expect(err).To(HaveOccurred())
-        },
-        Entry("httpClient errors", func(tc *testContext) {
-            tc.httpClient.Err = errors.New("expected error")
-        }),
-        Entry("token request returns unexpected status", func(tc *testContext) {
-            tc.httpClient.Status = http.StatusConflict
-        }),
-        Entry("oauth server returns invalid json", func(tc *testContext) {
-            tc.httpClient.Response = `im not json`
-        }),
-    )
+            token, err := client.TokenWithExpiry()
+            Expect(err).ToNot(HaveOccurred())
+            Expect(token.Token).To(Equal("bearer lemons"))
+            Expect(token.ExpiresAt).To(BeTemporally("~", time.Now().Add(24*time.Hour), time.Minute))
+
+            Expect(tc.httpClient.Reqs).To(Receive(Equal(mocks.HttpRequest{
+                Body: url.Values{
+                    "client_id":     {"cf"},
+                    "client_secret": {""},
+                    "username":      {"admin"},
+                    "password":      {"supersecret"},
+                    "grant_type":    {"password"},
+                    "response_type": {"token"},
+                }.Encode(),
+                Url:    "https://example.com/oauth/token",
+                Method: http.MethodPost,
+                Headers: http.Header{
+                    "Content-Type": {"application/x-www-form-urlencoded"},
+                    "Accept":       {"application/json"},
+                },
+            })))
+        })
+
+        DescribeTable("errors",
+            func(setupFunc func(*testContext)) {
+                client, tc := setup()
+                setupFunc(tc)
+
+                _, err := client.TokenWithExpiry()
+                Expect(err).To(HaveOccurred())
+            },
+            Entry("httpClient errors", func(tc *testContext) {
+                tc.httpClient.Err = errors.New("expected error")
+            }),
+            Entry("token request returns unexpected status", func(tc *testContext) {
+                tc.httpClient.Status = http.StatusConflict
+            }),
+            Entry("oauth server returns invalid json", func(tc *testContext) {
+                tc.httpClient.Response = `im not json`
+            }),
+        )
+    })
 })

@@ -6,6 +6,7 @@ import (
     "net/http"
     "net/url"
     "strings"
+    "time"
 )
 
 type httpClient interface {
@@ -28,32 +29,50 @@ func NewOauthClient(httpClient httpClient, oauthUrl, username, password string) 
     }
 }
 
+type TokenWithExpiry struct {
+    Token     string
+    ExpiresAt time.Time
+}
+
 func (c *OauthClient) Token() (string, error) {
-    req, err := c.tokenRequest()
+    tokenResponse, err := c.TokenWithExpiry()
     if err != nil {
         return "", err
+    }
+
+    return tokenResponse.Token, nil
+}
+
+func (c *OauthClient) TokenWithExpiry() (TokenWithExpiry, error) {
+    req, err := c.tokenRequest()
+    if err != nil {
+        return TokenWithExpiry{}, err
     }
 
     resp, err := c.httpClient.Do(req)
     if err != nil {
-        return "", err
+        return TokenWithExpiry{}, err
     }
 
     if resp.StatusCode > 299 {
-        return "", fmt.Errorf("getting token returned unexpected status code %d", resp.StatusCode)
+        err := fmt.Errorf("getting token returned unexpected status code %d", resp.StatusCode)
+        return TokenWithExpiry{}, err
     }
 
     var tokenResponse struct {
         AccessToken string `json:"access_token"`
         TokenType   string `json:"token_type"`
+        ExpiresIn   int    `json:"expires_in"`
     }
-
     err = decodeBody(resp, &tokenResponse)
     if err != nil {
-        return "", err
+        return TokenWithExpiry{}, err
     }
 
-    return fmt.Sprintf("%s %s", tokenResponse.TokenType, tokenResponse.AccessToken), nil
+    return TokenWithExpiry{
+        Token:     fmt.Sprintf("%s %s", tokenResponse.TokenType, tokenResponse.AccessToken),
+        ExpiresAt: time.Now().Add(time.Duration(tokenResponse.ExpiresIn) * time.Second),
+    }, nil
 }
 
 func (c *OauthClient) tokenRequest() (*http.Request, error) {
