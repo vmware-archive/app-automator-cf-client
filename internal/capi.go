@@ -9,7 +9,7 @@ import (
     "github.com/pivotal-cf/eats-cf-client/models"
 )
 
-type capiDoer func(method, path string, body string, opts ...models.HeaderOption) ([]byte, error)
+type capiDoer func(method, path string, body string, v interface{}, opts ...models.HeaderOption) error
 
 type CapiClient struct {
     Do capiDoer
@@ -47,17 +47,11 @@ func (c *CapiClient) Scale(appGuid, processType string, instanceCount uint) erro
     path := fmt.Sprintf("/v3/apps/%s/processes/%s/actions/scale", appGuid, processType)
     body := fmt.Sprintf(`{"instances": %d}`, instanceCount)
 
-    _, err := c.Do(http.MethodPost, path, body)
-    return err
+    return c.Do(http.MethodPost, path, body, nil)
 }
 
 func (c *CapiClient) get(path string, v interface{}) error {
-    resp, err := c.Do(http.MethodGet, path, "")
-    if err != nil {
-        return err
-    }
-
-    return json.Unmarshal(resp, v)
+    return c.Do(http.MethodGet, path, "", v)
 }
 
 func (c *CapiClient) CreateTask(appGuid, command string, cfg models.TaskConfig, opts ...models.HeaderOption) (models.Task, error) {
@@ -76,19 +70,12 @@ func (c *CapiClient) CreateTask(appGuid, command string, cfg models.TaskConfig, 
         return models.Task{}, err
     }
 
-    resp, err := c.Do(http.MethodPost, path, string(body), opts...)
-    if err != nil {
-        return models.Task{}, err
-    }
-
     var task models.Task
-    err = json.Unmarshal(resp, &task)
-
+    err = c.Do(http.MethodPost, path, string(body), &task, opts...)
     return task, err
 }
 
 func (c *CapiClient) Stop(appGuid string) error {
     path := fmt.Sprintf("/v3/apps/%s/actions/stop", appGuid)
-    _, err := c.Do(http.MethodPost, path, "")
-    return err
+    return c.Do(http.MethodPost, path, "", nil)
 }

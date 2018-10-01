@@ -21,7 +21,7 @@ var _ = Describe("CapiDoer", func() {
 
     var setup = func() (*internal.CapiDoer, *testContext) {
         httpClient := mocks.NewHttpClient()
-        httpClient.Response = "body"
+        httpClient.Response = `{"body": 1}`
         tc := &testContext{
             httpClient: httpClient,
         }
@@ -36,7 +36,7 @@ var _ = Describe("CapiDoer", func() {
     It("does the request", func() {
         client, tc := setup()
 
-        _, err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons")
+        err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons", nil)
         Expect(err).ToNot(HaveOccurred())
 
         Expect(tc.httpClient.Reqs).To(Receive(Equal(mocks.HttpRequest{
@@ -53,7 +53,7 @@ var _ = Describe("CapiDoer", func() {
     It("applies header options", func() {
         client, tc := setup()
 
-        _, err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons", func(header *http.Header) {
+        err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons", nil, func(header *http.Header) {
             header.Add("Limes", "grapefruit")
         })
         Expect(err).ToNot(HaveOccurred())
@@ -66,7 +66,7 @@ var _ = Describe("CapiDoer", func() {
     It("does not get auth token if provided in header options", func() {
         client, tc := setup()
 
-        _, err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons", func(header *http.Header) {
+        err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons", nil, func(header *http.Header) {
             header.Add("Authorization", "grapefruit")
         })
         Expect(err).ToNot(HaveOccurred())
@@ -81,16 +81,30 @@ var _ = Describe("CapiDoer", func() {
         client, tc := setup()
         tc.httpClient.Response = ""
 
-        _, err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons")
+        err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons", nil)
         Expect(err).ToNot(HaveOccurred())
     })
 
-    It("returns the body if not nil", func() {
+    It("returns the body if interface is not nil", func() {
         client, _ := setup()
 
-        body, err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons")
+        resp := &struct{
+            Body int `json:"body"`
+        }{}
+        err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons", resp)
         Expect(err).ToNot(HaveOccurred())
-        Expect(string(body)).To(Equal("body"))
+        Expect(resp.Body).To(Equal(1))
+    })
+
+    It("returns an error if unmarshaling fails", func() {
+        client, tc := setup()
+        tc.httpClient.Response = `[invalid json}`
+
+        resp := &struct{
+            Body int `json:"body"`
+        }{}
+        err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons", resp)
+        Expect(err).To(HaveOccurred())
     })
 
     DescribeTable("errors",
@@ -98,7 +112,7 @@ var _ = Describe("CapiDoer", func() {
             client, tc := setup()
             setupFunc(tc)
 
-            _, err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons")
+            err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons", nil)
             Expect(err).To(HaveOccurred())
         },
         Entry("httpClient errors", func(tc *testContext) {

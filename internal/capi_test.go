@@ -1,6 +1,7 @@
 package internal_test
 
 import (
+    "encoding/json"
     "errors"
     "net/http"
 
@@ -8,21 +9,20 @@ import (
     "github.com/pivotal-cf/eats-cf-client/models"
 
     . "github.com/onsi/ginkgo"
-    . "github.com/onsi/ginkgo/extensions/table"
     . "github.com/onsi/gomega"
 )
 
 var _ = Describe("Capi", func() {
     Describe("Apps()", func() {
         It("gets the apps", func() {
-            c := internal.NewCapiClient(func(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
+            c := internal.NewCapiClient(func(method, path, body string, v interface{}, opts ...models.HeaderOption) error {
                 Expect(method).To(Equal(http.MethodGet))
                 Expect(path).To(And(
                     ContainSubstring("/v3/apps"),
                     ContainSubstring("lemons=limes"),
                     ContainSubstring("mangoes=limes"),
                 ))
-                return []byte(validAppsResponse), nil
+                return json.Unmarshal([]byte(validAppsResponse), v)
             })
 
             apps, err := c.Apps(map[string]string{
@@ -36,27 +36,22 @@ var _ = Describe("Capi", func() {
             }))
         })
 
-        DescribeTable("errors", func(do func(method, path, body string, opts ...models.HeaderOption) ([]byte, error)) {
-            c := internal.NewCapiClient(do)
+        It("returns an error if do returns an error", func() {
+            c := internal.NewCapiClient(func(method, path, body string, v interface{}, opts ...models.HeaderOption) error {
+                return errors.New("expected")
+            })
 
             _, err := c.Apps(nil)
             Expect(err).To(HaveOccurred())
-        },
-            Entry("do returns an error", func(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
-                return nil, errors.New("expected")
-            }),
-            Entry("do returns invalid json", func(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
-                return []byte("{]"), nil
-            }),
-        )
+        })
     })
 
     Describe("Process()", func() {
         It("gets the process", func() {
-            c := internal.NewCapiClient(func(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
+            c := internal.NewCapiClient(func(method, path, body string, v interface{}, opts ...models.HeaderOption) error {
                 Expect(method).To(Equal(http.MethodGet))
                 Expect(path).To(Equal("/v3/apps/app-guid/processes/process-type"))
-                return []byte(validProcessResponse), nil
+                return json.Unmarshal([]byte(validProcessResponse), v)
             })
 
             process, err := c.Process("app-guid", "process-type")
@@ -67,51 +62,44 @@ var _ = Describe("Capi", func() {
             }))
         })
 
-        DescribeTable("errors", func(do func(method, path, body string, opts ...models.HeaderOption) ([]byte, error)) {
-            c := internal.NewCapiClient(do)
+        It("returns an error if do returns an error", func() {
+            c := internal.NewCapiClient(func(method, path, body string, v interface{}, opts ...models.HeaderOption) error {
+                return errors.New("expected")
+            })
 
             _, err := c.Process("app-guid", "process-type")
             Expect(err).To(HaveOccurred())
-        },
-            Entry("do returns an error", func(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
-                return nil, errors.New("expected")
-            }),
-            Entry("do returns invalid json", func(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
-                return []byte("{]"), nil
-            }),
-        )
+        })
     })
 
     Describe("Scale()", func() {
         It("scales the process", func() {
             var called bool
-            c := internal.NewCapiClient(func(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
+            c := internal.NewCapiClient(func(method, path, body string, v interface{}, opts ...models.HeaderOption) error {
                 called = true
                 Expect(method).To(Equal(http.MethodPost))
                 Expect(path).To(Equal("/v3/apps/app-guid/processes/process-type/actions/scale"))
                 Expect(body).To(MatchJSON(`{ "instances": 5 }`))
-                return nil, nil
+                return nil
             })
 
-            err := c.Scale("app-guid", "process-type", 5)
-            Expect(err).ToNot(HaveOccurred())
+            Expect(c.Scale("app-guid", "process-type", 5)).To(Succeed())
             Expect(called).To(BeTrue())
         })
 
-        DescribeTable("errors", func(do func(method, path, body string, opts ...models.HeaderOption) ([]byte, error)) {
-            c := internal.NewCapiClient(do)
+        It("returns an error if do returns an error", func() {
+            c := internal.NewCapiClient(func(method, path, body string, v interface{}, opts ...models.HeaderOption) error {
+                return errors.New("expected")
+            })
+
             Expect(c.Scale("app-guid", "process-type", 5)).ToNot(Succeed())
-        },
-            Entry("do returns an error", func(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
-                return nil, errors.New("expected")
-            }),
-        )
+        })
     })
 
     Describe("CreateTask()", func() {
         It("creates a task", func() {
             var called bool
-            c := internal.NewCapiClient(func(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
+            c := internal.NewCapiClient(func(method, path, body string, v interface{}, opts ...models.HeaderOption) error {
                 called = true
                 Expect(method).To(Equal(http.MethodPost))
                 Expect(path).To(Equal("/v3/apps/app-guid/tasks"))
@@ -122,7 +110,7 @@ var _ = Describe("Capi", func() {
                     "memory_in_mb": 30,
                     "droplet_guid": "droplet-guid"
                 }`))
-                return []byte(validTaskResponse), nil
+                return json.Unmarshal([]byte(validTaskResponse), v)
             })
 
             task, err := c.CreateTask("app-guid", "echo test", models.TaskConfig{
@@ -137,11 +125,11 @@ var _ = Describe("Capi", func() {
         })
 
         It("passes header options to doer", func() {
-            c := internal.NewCapiClient(func(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
+            c := internal.NewCapiClient(func(method, path, body string, v interface{}, opts ...models.HeaderOption) error {
                 for _, o := range opts {
                     o(&http.Header{})
                 }
-                return []byte(validTaskResponse), nil
+                return json.Unmarshal([]byte(validTaskResponse), v)
             })
 
             var headerOptionUsed bool
@@ -159,44 +147,37 @@ var _ = Describe("Capi", func() {
             Expect(headerOptionUsed).To(BeTrue())
         })
 
-        DescribeTable("errors", func(do func(method, path, body string, opts ...models.HeaderOption) ([]byte, error)) {
-            c := internal.NewCapiClient(do)
+        It("returns an error if do returns an error", func() {
+            c := internal.NewCapiClient(func(method, path, body string, v interface{}, opts ...models.HeaderOption) error {
+                return errors.New("expected")
+            })
+
             _, err := c.CreateTask("app-guid", "command", models.TaskConfig{})
             Expect(err).To(HaveOccurred())
-        },
-            Entry("do returns an error", func(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
-                return nil, errors.New("expected")
-            }),
-            Entry("do returns invalid json", func(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
-                return []byte("{]"), nil
-            }),
-        )
+        })
     })
 
     Describe("Stop()", func() {
         It("stops the process", func() {
             var called bool
-            c := internal.NewCapiClient(func(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
+            c := internal.NewCapiClient(func(method, path, body string, v interface{}, opts ...models.HeaderOption) error {
                 called = true
                 Expect(method).To(Equal(http.MethodPost))
                 Expect(path).To(Equal("/v3/apps/app-guid/actions/stop"))
-                return nil, nil
+                return nil
             })
 
-            err := c.Stop("app-guid")
-            Expect(err).ToNot(HaveOccurred())
+            Expect(c.Stop("app-guid")).To(Succeed())
             Expect(called).To(BeTrue())
         })
 
-        DescribeTable("errors", func(do func(method, path, body string, opts ...models.HeaderOption) ([]byte, error)) {
-            c := internal.NewCapiClient(do)
-            err := c.Stop("app-guid")
-            Expect(err).To(HaveOccurred())
-        },
-            Entry("do returns an error", func(method, path, body string, opts ...models.HeaderOption) ([]byte, error) {
-                return nil, errors.New("expected")
-            }),
-        )
+        It("returns an error if do returns an error", func() {
+            c := internal.NewCapiClient(func(method, path, body string, v interface{}, opts ...models.HeaderOption) error {
+                return errors.New("expected")
+            })
+
+            Expect(c.Stop("app-guid")).ToNot(Succeed())
+        })
     })
 })
 

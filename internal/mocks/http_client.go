@@ -1,7 +1,6 @@
 package mocks
 
 import (
-    "io"
     "io/ioutil"
     "net/http"
     "strings"
@@ -47,11 +46,7 @@ func (c *HttpClient) Do(req *http.Request) (*http.Response, error) {
         Headers: req.Header,
     }
 
-    var respBody io.ReadCloser
-    if c.Response != "" {
-        respBody = ioutil.NopCloser(strings.NewReader(c.Response))
-    }
-
+    respBody := ioutil.NopCloser(strings.NewReader(c.Response))
     return &http.Response{
         StatusCode: c.Status,
         Body:       respBody,
