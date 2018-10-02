@@ -4,6 +4,7 @@ import (
     "encoding/json"
     "fmt"
     "github.com/pivotal-cf/eats-cf-client/models"
+    "io"
     "io/ioutil"
     "net/http"
     "strings"
@@ -42,7 +43,8 @@ func (c *CapiDoer) doUrl(method, url, body string, v interface{}, opts ...models
     defer resp.Body.Close()
 
     if code := resp.StatusCode; code > 299 || code < 200 {
-        return fmt.Errorf("CAPI request (%s %s) returned unexpected status: %d", method, url, code) //TODO capi error
+        return fmt.Errorf("CAPI request (%s %s) returned unexpected status (%d): %s",
+            method, url, code, decodeCapiErr(resp.Body))
     }
 
     if v != nil {
@@ -50,6 +52,19 @@ func (c *CapiDoer) doUrl(method, url, body string, v interface{}, opts ...models
     }
 
     return nil
+}
+
+func decodeCapiErr(body io.Reader) error {
+    var capiErr struct {
+        Title  string `json:"title"`
+        Detail string `json:"detail"`
+    }
+    err := json.NewDecoder(body).Decode(&capiErr)
+    if err != nil {
+        return fmt.Errorf("cannot decode CAPI error")
+    }
+
+    return fmt.Errorf("%s (%s)", capiErr.Title, capiErr.Detail)
 }
 
 func (c *CapiDoer) buildReq(method string, url string, body string, opts ...models.HeaderOption) (*http.Request, error) {
