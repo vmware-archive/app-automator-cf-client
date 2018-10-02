@@ -9,24 +9,34 @@ import (
     "github.com/pivotal-cf/eats-cf-client/models"
 )
 
-type capiDoer func(method, path string, body string, v interface{}, opts ...models.HeaderOption) error
-
-type CapiClient struct {
-    Do capiDoer
+type capiRequestor interface {
+    Do(method, path string, body string, v interface{}, opts ...models.HeaderOption) error
+    GetPagedResources(path string, v Accumulator, opts ...models.HeaderOption) error
 }
 
-func NewCapiClient(doer capiDoer) *CapiClient {
+type CapiClient struct {
+    requestor capiRequestor
+}
+
+func NewCapiClient(requestor capiRequestor) *CapiClient {
     return &CapiClient{
-        Do: doer,
+        requestor: requestor,
     }
 }
 
 func (c *CapiClient) Apps(query map[string]string) ([]models.App, error) {
-    var appsResponse struct {
-        Resources []models.App `json:"resources"`
-    }
-    err := c.get("/v3/apps?"+buildQuery(query), &appsResponse)
-    return appsResponse.Resources, err
+    var apps []models.App
+    err := c.requestor.GetPagedResources("/v3/apps?"+buildQuery(query), func(messages json.RawMessage) error {
+        var page []models.App
+
+        err := json.Unmarshal(messages, &page)
+        if err != nil {
+            return err
+        }
+        apps = append(apps, page...)
+        return nil
+    })
+    return apps, err
 }
 
 func buildQuery(values map[string]string) string {
@@ -47,11 +57,11 @@ func (c *CapiClient) Scale(appGuid, processType string, instanceCount uint) erro
     path := fmt.Sprintf("/v3/apps/%s/processes/%s/actions/scale", appGuid, processType)
     body := fmt.Sprintf(`{"instances": %d}`, instanceCount)
 
-    return c.Do(http.MethodPost, path, body, nil)
+    return c.requestor.Do(http.MethodPost, path, body, nil)
 }
 
 func (c *CapiClient) get(path string, v interface{}) error {
-    return c.Do(http.MethodGet, path, "", v)
+    return c.requestor.Do(http.MethodGet, path, "", v)
 }
 
 func (c *CapiClient) CreateTask(appGuid, command string, cfg models.TaskConfig, opts ...models.HeaderOption) (models.Task, error) {
@@ -71,11 +81,11 @@ func (c *CapiClient) CreateTask(appGuid, command string, cfg models.TaskConfig, 
     }
 
     var task models.Task
-    err = c.Do(http.MethodPost, path, string(body), &task, opts...)
+    err = c.requestor.Do(http.MethodPost, path, string(body), &task, opts...)
     return task, err
 }
 
 func (c *CapiClient) Stop(appGuid string) error {
     path := fmt.Sprintf("/v3/apps/%s/actions/stop", appGuid)
-    return c.Do(http.MethodPost, path, "", nil)
+    return c.requestor.Do(http.MethodPost, path, "", nil)
 }

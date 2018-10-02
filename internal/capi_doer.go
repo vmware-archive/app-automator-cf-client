@@ -26,7 +26,11 @@ func NewCapiDoer(httpClient httpClient, capiUrl string, tokenGetter tokenGetter)
 }
 
 func (c *CapiDoer) Do(method, path, body string, v interface{}, opts ...models.HeaderOption) error {
-    req, err := c.buildReq(method, path, body, opts...)
+    return c.doUrl(method, c.capiUrl+path, body, v, opts...)
+}
+
+func (c *CapiDoer) doUrl(method, url, body string, v interface{}, opts ...models.HeaderOption) error {
+    req, err := c.buildReq(method, url, body, opts...)
     if err != nil {
         return err
     }
@@ -38,7 +42,7 @@ func (c *CapiDoer) Do(method, path, body string, v interface{}, opts ...models.H
     defer resp.Body.Close()
 
     if code := resp.StatusCode; code > 299 || code < 200 {
-        return fmt.Errorf("CAPI request (%s %s) returned unexpected status: %d", method, path, code) //TODO capi error
+        return fmt.Errorf("CAPI request (%s %s) returned unexpected status: %d", method, url, code) //TODO capi error
     }
 
     if v != nil {
@@ -48,8 +52,8 @@ func (c *CapiDoer) Do(method, path, body string, v interface{}, opts ...models.H
     return nil
 }
 
-func (c *CapiDoer) buildReq(method string, path string, body string, opts ...models.HeaderOption) (*http.Request, error) {
-    req, err := http.NewRequest(method, c.capiUrl+path, ioutil.NopCloser(strings.NewReader(body)))
+func (c *CapiDoer) buildReq(method string, url string, body string, opts ...models.HeaderOption) (*http.Request, error) {
+    req, err := http.NewRequest(method, url, ioutil.NopCloser(strings.NewReader(body)))
     if err != nil {
         return nil, err
     }
@@ -69,4 +73,49 @@ func (c *CapiDoer) buildReq(method string, path string, body string, opts ...mod
     }
 
     return req, err
+}
+
+type paginatedResp struct {
+    Resources  json.RawMessage `json:"resources"`
+    Pagination pagination      `json:"pagination"`
+}
+
+type pagination struct {
+    Next *struct {
+        Href string `json:"href"`
+    } `json:"next"`
+}
+
+type Accumulator func(json.RawMessage) error
+
+func (c *CapiDoer) GetPagedResources(path string, a Accumulator, opts ...models.HeaderOption) error {
+    var err error
+    url := c.capiUrl + path
+    for url != "" {
+        url, err = c.getPage(url, a, opts...)
+        if err != nil {
+            return err
+        }
+    }
+
+    return nil
+}
+
+func (c *CapiDoer) getPage(url string, a Accumulator, opts ...models.HeaderOption) (string, error) {
+    var page = &paginatedResp{}
+    err := c.doUrl(http.MethodGet, url, "", page, opts...)
+    if err != nil {
+        return "", err
+    }
+
+    err = a(page.Resources)
+    if err != nil {
+        return "", err
+    }
+
+    if page.Pagination.Next != nil {
+        return page.Pagination.Next.Href, nil
+    }
+
+    return "", nil
 }

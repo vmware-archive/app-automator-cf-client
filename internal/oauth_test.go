@@ -69,7 +69,7 @@ var _ = Describe("Oauth", func() {
                 tc.httpClient.Status = http.StatusConflict
             }),
             Entry("oauth server returns invalid json", func(tc *testContext) {
-                tc.httpClient.Response = `im not json`
+                tc.httpClient.Responses <- "im not json"
             }),
         )
     })
@@ -116,7 +116,7 @@ var _ = Describe("Oauth", func() {
                 tc.httpClient.Status = http.StatusConflict
             }),
             Entry("oauth server returns invalid json", func(tc *testContext) {
-                tc.httpClient.Response = `im not json`
+                tc.httpClient.Responses <- "im not json"
             }),
         )
     })

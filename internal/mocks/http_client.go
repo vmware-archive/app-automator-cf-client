@@ -16,18 +16,18 @@ type HttpRequest struct {
 }
 
 type HttpClient struct {
-    Err      error
-    Status   int
-    Response string
+    Err       error
+    Status    int
+    Responses chan string
 
     Reqs chan HttpRequest
 }
 
 func NewHttpClient() *HttpClient {
     return &HttpClient{
-        Reqs:     make(chan HttpRequest, 100),
-        Response: `{"access_token": "lemons", "token_type": "bearer", "expires_in": 86400}`,
-        Status:   http.StatusOK,
+        Reqs:      make(chan HttpRequest, 100),
+        Responses: make(chan string, 100),
+        Status:    http.StatusOK,
     }
 }
 
@@ -46,7 +46,14 @@ func (c *HttpClient) Do(req *http.Request) (*http.Response, error) {
         Headers: req.Header,
     }
 
-    respBody := ioutil.NopCloser(strings.NewReader(c.Response))
+    var resp string
+    select {
+    case resp = <-c.Responses:
+    default:
+        resp = `{"access_token": "lemons", "token_type": "bearer", "expires_in": 86400}`
+    }
+
+    respBody := ioutil.NopCloser(strings.NewReader(resp))
     return &http.Response{
         StatusCode: c.Status,
         Body:       respBody,
