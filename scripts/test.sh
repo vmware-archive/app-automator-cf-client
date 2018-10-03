@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-pushd $(dirname $(dirname $0))
-  go get github.com/onsi/ginkgo/ginkgo
+export GOPATH="$(cd $(dirname $0)/../../../../..; pwd -P)"
+
+pushd "$(dirname $0)/.."
   go get -t ./...
-  ginkgo -r -p -race -randomizeAllSpecs
+  $GOPATH/bin/ginkgo -r -p -race -randomizeAllSpecs
 popd
