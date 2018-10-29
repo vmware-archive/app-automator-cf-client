@@ -47,7 +47,7 @@ type Config struct {
     HttpClient         *http.Client
     Username           string
     Password           string
-    TokenGetter func()(string,error)
+    TokenGetter        func() (string, error)
 }
 
 func Build(username, password string) *Client {
