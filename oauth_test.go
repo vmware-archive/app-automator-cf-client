@@ -25,7 +25,7 @@ var _ = Describe("Oauth", func() {
         It("uses user credentials if set", func() {
             tc := setup()
 
-            client := NewOauth(OauthConfig{
+            client := NewTokenCache(OauthConfig{
                 HttpClient: tc.httpClient,
                 OauthUrl:   "https://example.com",
                 Username:   "admin",
@@ -52,7 +52,7 @@ var _ = Describe("Oauth", func() {
         It("uses client credentials if set", func() {
             tc := setup()
 
-            client := NewOauth(OauthConfig{
+            client := NewTokenCache(OauthConfig{
                 HttpClient:   tc.httpClient,
                 OauthUrl:     "https://example.com",
                 Client:       "client",

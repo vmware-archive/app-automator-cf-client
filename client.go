@@ -67,12 +67,12 @@ func Build(username, password string) *Client {
 
 func New(cfg Config) *Client {
     tokenEndpoint := strings.Replace(cfg.CloudControllerUrl, "api", "login", 1)
-    oauth := internal.NewTokenCache(NewOauth(OauthConfig{
+    oauth := NewTokenCache(OauthConfig{
         HttpClient: cfg.HttpClient,
         OauthUrl:   tokenEndpoint,
         Username:   cfg.Username,
         Password:   cfg.Password,
-    }).TokenWithExpiry)
+    })
     capi := internal.NewCapiClient(internal.NewCapiDoer(cfg.HttpClient, cfg.CloudControllerUrl, oauth.Token))
 
     return &Client{

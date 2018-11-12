@@ -20,20 +20,24 @@ type OauthConfig struct {
     ClientSecret string
 }
 
-func NewOauth(cfg OauthConfig) *internal.OauthClient {
+func NewTokenCache(cfg OauthConfig) *internal.TokenCache {
+    var oauthClient *internal.OauthClient
+
     if cfg.Username != "" {
-        return internal.NewUserOauthClient(
+        oauthClient = internal.NewUserOauthClient(
             cfg.HttpClient,
             cfg.OauthUrl,
             cfg.Username,
             cfg.Password,
         )
+    } else {
+        oauthClient = internal.NewClientCredentialsOauthClient(
+            cfg.HttpClient,
+            cfg.OauthUrl,
+            cfg.Client,
+            cfg.ClientSecret,
+        )
     }
 
-    return internal.NewClientCredentialsOauthClient(
-        cfg.HttpClient,
-        cfg.OauthUrl,
-        cfg.Client,
-        cfg.ClientSecret,
-    )
+    return internal.NewTokenCache(oauthClient.TokenWithExpiry)
 }
