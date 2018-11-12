@@ -121,6 +121,7 @@ var _ = Describe("Client", func() {
             _, err := c.CreateTask("app-guid", "echo test", models.TaskConfig{
                 Name:        "lemons",
                 DiskInMB:    7,
+                MemoryInMB:  0,
                 DropletGUID: "droplet-guid",
             })
             Expect(err).ToNot(HaveOccurred())
@@ -139,6 +140,7 @@ var _ = Describe("Client", func() {
 
             _, err := c.CreateTask("app-guid", "echo test", models.TaskConfig{
                 Name:        "lemons",
+                DiskInMB:    0,
                 MemoryInMB:  7,
                 DropletGUID: "droplet-guid",
             })
@@ -270,7 +272,7 @@ type mockCapi struct {
     stopErr  error
     taskErr  error
 
-    taskCfg    models.TaskConfig
+    taskCfg models.TaskConfig
 }
 
 func (c *mockCapi) Apps(query map[string]string) ([]models.App, error) {
