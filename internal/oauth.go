@@ -14,18 +14,36 @@ type httpClient interface {
 }
 
 type OauthClient struct {
-    httpClient httpClient
-    oauthUrl   string
-    username   string
-    password   string
+    httpClient  httpClient
+    oauthUrl    string
+    requestBody string
 }
 
-func NewOauthClient(httpClient httpClient, oauthUrl, username, password string) *OauthClient {
+func NewUserOauthClient(httpClient httpClient, oauthUrl, username, password string) *OauthClient {
     return &OauthClient{
         httpClient: httpClient,
         oauthUrl:   oauthUrl,
-        username:   username,
-        password:   password,
+        requestBody: url.Values{
+            "client_id":     {"cf"},
+            "client_secret": {""},
+            "username":      {username},
+            "password":      {password},
+            "grant_type":    {"password"},
+            "response_type": {"token"},
+        }.Encode(),
+    }
+}
+
+func NewClientCredentialsOauthClient(httpClient httpClient, oauthUrl, client, secret string) *OauthClient {
+    return &OauthClient{
+        httpClient: httpClient,
+        oauthUrl:   oauthUrl,
+        requestBody: url.Values{
+            "client_id":     {client},
+            "client_secret": {secret},
+            "grant_type":    {"client_credentials"},
+            "response_type": {"token"},
+        }.Encode(),
     }
 }
 
@@ -76,16 +94,7 @@ func (c *OauthClient) TokenWithExpiry() (TokenWithExpiry, error) {
 }
 
 func (c *OauthClient) tokenRequest() (*http.Request, error) {
-    body := url.Values{
-        "client_id":     {"cf"},
-        "client_secret": {""},
-        "username":      {c.username},
-        "password":      {c.password},
-        "grant_type":    {"password"},
-        "response_type": {"token"},
-    }.Encode()
-
-    req, err := http.NewRequest(http.MethodPost, c.oauthUrl+"/oauth/token", strings.NewReader(body))
+    req, err := http.NewRequest(http.MethodPost, c.oauthUrl+"/oauth/token", strings.NewReader(c.requestBody))
     if err != nil {
         return nil, err
     }
