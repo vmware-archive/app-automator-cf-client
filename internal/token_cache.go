@@ -12,7 +12,8 @@ type TokenCache struct {
 
     cachedToken TokenWithExpiry
     expiresAt   time.Time
-    mu          sync.RWMutex
+
+    sync.Mutex
 }
 
 func NewTokenCache(tokenGetter tokenWithExpiryGetter) *TokenCache {
@@ -22,11 +23,12 @@ func NewTokenCache(tokenGetter tokenWithExpiryGetter) *TokenCache {
 }
 
 func (c *TokenCache) Token() (string, error) {
-    c.mu.RLock()
-    token := c.cachedToken
-    c.mu.RUnlock()
-
     oneMinuteInFuture := time.Now().Add(time.Minute)
+
+    c.Lock()
+    defer c.Unlock()
+
+    token := c.cachedToken
     if token.Token == "" || token.ExpiresAt.Before(oneMinuteInFuture) {
         return c.refresh()
     }
@@ -40,9 +42,7 @@ func (c *TokenCache) refresh() (string, error) {
         return "", err
     }
 
-    c.mu.Lock()
     c.cachedToken = token
-    c.mu.Unlock()
 
     return token.Token, nil
 }
