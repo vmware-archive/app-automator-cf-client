@@ -50,7 +50,7 @@ type Config struct {
     TokenGetter        func() (string, error)
 }
 
-func Build(username, password string) *Client {
+func Build() *Client {
     env := LoadEnv()
     httpClient := buildHttpClient(env)
 
@@ -58,8 +58,12 @@ func Build(username, password string) *Client {
         CloudControllerUrl: env.CloudControllerApi,
         SpaceGuid:          env.VcapApplication.SpaceID,
         HttpClient:         httpClient,
-        Username:           username,
-        Password:           password,
+    }
+
+    credentials, ok := getUserProvidedCredentials(env.VcapServices.UserProvided)
+    if ok {
+        cfg.Username = credentials["username"]
+        cfg.Password = credentials["password"]
     }
 
     return New(cfg)
@@ -84,7 +88,7 @@ func New(cfg Config) *Client {
     }
 }
 
-func buildHttpClient(env Environment) *http.Client {
+func buildHttpClient(env environment) *http.Client {
     return &http.Client{
         Transport: &http.Transport{
             TLSClientConfig: &tls.Config{
