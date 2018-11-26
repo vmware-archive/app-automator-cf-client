@@ -4,7 +4,7 @@ import (
     "fmt"
     "sync"
 
-    "github.com/pivotal-cf/eats-cf-client/models"
+    "github.com/pivotal-cf/app-automator-cf-client/models"
 )
 
 type appGetter func(query map[string]string) ([]models.App, error)

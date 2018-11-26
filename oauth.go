@@ -1,7 +1,7 @@
 package client
 
 import (
-    "github.com/pivotal-cf/eats-cf-client/internal"
+    "github.com/pivotal-cf/app-automator-cf-client/internal"
     "net/http"
 )
 

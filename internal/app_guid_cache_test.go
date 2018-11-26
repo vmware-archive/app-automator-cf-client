@@ -3,8 +3,8 @@ package internal_test
 import (
     "errors"
 
-    "github.com/pivotal-cf/eats-cf-client/internal"
-    "github.com/pivotal-cf/eats-cf-client/models"
+    "github.com/pivotal-cf/app-automator-cf-client/internal"
+    "github.com/pivotal-cf/app-automator-cf-client/models"
 
     . "github.com/onsi/ginkgo"
     . "github.com/onsi/gomega"

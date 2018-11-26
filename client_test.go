@@ -4,8 +4,8 @@ import (
     "errors"
     "net/http"
 
-    "github.com/pivotal-cf/eats-cf-client"
-    "github.com/pivotal-cf/eats-cf-client/models"
+    "github.com/pivotal-cf/app-automator-cf-client"
+    "github.com/pivotal-cf/app-automator-cf-client/models"
 
     . "github.com/onsi/ginkgo"
     . "github.com/onsi/ginkgo/extensions/table"

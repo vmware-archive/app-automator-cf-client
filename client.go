@@ -5,8 +5,8 @@ import (
     "net/http"
     "strings"
 
-    "github.com/pivotal-cf/eats-cf-client/internal"
-    "github.com/pivotal-cf/eats-cf-client/models"
+    "github.com/pivotal-cf/app-automator-cf-client/internal"
+    "github.com/pivotal-cf/app-automator-cf-client/models"
 )
 
 const (

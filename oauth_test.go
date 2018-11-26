@@ -4,10 +4,10 @@ import (
     . "github.com/onsi/ginkgo"
     . "github.com/onsi/gomega"
     . "github.com/onsi/gomega/gstruct"
-    "github.com/pivotal-cf/eats-cf-client/internal/mocks"
+    "github.com/pivotal-cf/app-automator-cf-client/internal/mocks"
     "net/url"
 
-    . "github.com/pivotal-cf/eats-cf-client"
+    . "github.com/pivotal-cf/app-automator-cf-client"
 )
 
 var _ = Describe("Oauth", func() {

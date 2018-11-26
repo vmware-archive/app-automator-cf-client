@@ -10,8 +10,8 @@ import (
     "strings"
     "time"
 
-    "github.com/pivotal-cf/eats-cf-client"
-    "github.com/pivotal-cf/eats-cf-client/models"
+    "github.com/pivotal-cf/app-automator-cf-client"
+    "github.com/pivotal-cf/app-automator-cf-client/models"
 
     "github.com/gorilla/mux"
     . "github.com/onsi/ginkgo"

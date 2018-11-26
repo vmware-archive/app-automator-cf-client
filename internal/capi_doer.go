@@ -3,7 +3,7 @@ package internal
 import (
     "encoding/json"
     "fmt"
-    "github.com/pivotal-cf/eats-cf-client/models"
+    "github.com/pivotal-cf/app-automator-cf-client/models"
     "io"
     "io/ioutil"
     "net/http"

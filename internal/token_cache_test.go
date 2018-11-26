@@ -7,7 +7,7 @@ import (
 
     . "github.com/onsi/ginkgo"
     . "github.com/onsi/gomega"
-    "github.com/pivotal-cf/eats-cf-client/internal"
+    "github.com/pivotal-cf/app-automator-cf-client/internal"
 )
 
 var _ = Describe("Token cache", func() {
