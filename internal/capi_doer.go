@@ -144,6 +144,9 @@ type CapiError struct {
 }
 
 func (e *CapiError) Error() string {
+    if e == nil {
+        return ""
+    }
     return e.message
 }
 
