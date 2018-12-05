@@ -2,6 +2,7 @@ package internal
 
 import (
     "fmt"
+    "net/http"
     "sync"
 
     "github.com/pivotal-cf/app-automator-cf-client/models"
@@ -78,10 +79,19 @@ func (c *AppGuidCache) Invalidate() {
 func (c *AppGuidCache) TryWithRefresh(appName string, f func(appGuid string) error) error {
     err := c.try(appName, f)
     if err != nil {
-        c.Invalidate()
-        return c.try(appName, f)
+        if isNotFound(err) {
+            c.Invalidate()
+            return c.try(appName, f)
+        }
+
+        return err
     }
     return nil
+}
+
+func isNotFound(err error) bool {
+    capiErr, ok := err.(*CapiError)
+    return ok && capiErr != nil && capiErr.ResponseCode == http.StatusNotFound
 }
 
 func (c *AppGuidCache) try(appName string, f func(appGuid string) error) error {

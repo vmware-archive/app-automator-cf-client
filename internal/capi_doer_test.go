@@ -3,6 +3,7 @@ package internal_test
 import (
     "encoding/json"
     "errors"
+    "github.com/onsi/gomega/types"
     "net/http"
 
     "github.com/pivotal-cf/app-automator-cf-client/internal"
@@ -111,22 +112,23 @@ var _ = Describe("CapiDoer", func() {
         })
 
         DescribeTable("errors",
-            func(setupFunc func(*testContext)) {
+            func(setupFunc func(*testContext), respCodeMatcher types.GomegaMatcher) {
                 client, tc := setup(`{"body": 1}`)
                 setupFunc(tc)
 
                 err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons", nil)
                 Expect(err).To(HaveOccurred())
+                Expect(err.ResponseCode).To(respCodeMatcher)
             },
             Entry("httpClient errors", func(tc *testContext) {
                 tc.httpClient.Err = errors.New("expected error")
-            }),
+            }, BeZero()),
             Entry("request returns unexpected status", func(tc *testContext) {
                 tc.httpClient.Status = http.StatusConflict
-            }),
+            }, Equal(http.StatusConflict)),
             Entry("get token returns an error", func(tc *testContext) {
                 tc.getTokenErr = errors.New("expected error")
-            }),
+            }, BeZero()),
         )
     })
 

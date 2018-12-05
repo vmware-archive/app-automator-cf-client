@@ -2,6 +2,7 @@ package internal_test
 
 import (
     "errors"
+    "net/http"
 
     "github.com/pivotal-cf/app-automator-cf-client/internal"
     "github.com/pivotal-cf/app-automator-cf-client/models"
@@ -16,13 +17,8 @@ var _ = Describe("Capi", func() {
             var appsRefreshed bool
             c := internal.NewAppGuidCache(
                 func(query map[string]string) ([]models.App, error) {
-                    Expect(query).To(HaveKeyWithValue("space_guids", "space-guid"))
-
                     appsRefreshed = true
-                    return []models.App{
-                        {Name: "limes", Guid: "limes-guid"},
-                        {Name: "lemons", Guid: "lemons-guid"},
-                    }, nil
+                    return validGuids(query)
                 },
                 "space-guid",
             )
@@ -38,10 +34,7 @@ var _ = Describe("Capi", func() {
             c := internal.NewAppGuidCache(
                 func(query map[string]string) ([]models.App, error) {
                     appsRefreshed++
-                    return []models.App{
-                        {Name: "limes", Guid: "limes-guid"},
-                        {Name: "lemons", Guid: "lemons-guid"},
-                    }, nil
+                    return validGuids(query)
                 },
                 "space-guid",
             )
@@ -62,30 +55,14 @@ var _ = Describe("Capi", func() {
         })
 
         It("handles concurrent reads", func() {
-            c := internal.NewAppGuidCache(
-                func(query map[string]string) ([]models.App, error) {
-                    return []models.App{
-                        {Name: "limes", Guid: "limes-guid"},
-                        {Name: "lemons", Guid: "lemons-guid"},
-                    }, nil
-                },
-                "space-guid",
-            )
+            c := internal.NewAppGuidCache(validGuids, "space-guid")
             for i := 0; i < 50; i++ {
                 go func() { c.Get("lemons") }()
             }
         })
 
         It("returns an error if the app isn't found", func() {
-            c := internal.NewAppGuidCache(
-                func(query map[string]string) ([]models.App, error) {
-                    return []models.App{
-                        {Name: "limes", Guid: "limes-guid"},
-                        {Name: "lemons", Guid: "lemons-guid"},
-                    }, nil
-                },
-                "space-guid",
-            )
+            c := internal.NewAppGuidCache(validGuids, "space-guid")
 
             _, err := c.Get("grapefruit")
             Expect(err).To(HaveOccurred())
@@ -112,10 +89,7 @@ var _ = Describe("Capi", func() {
             c := internal.NewAppGuidCache(
                 func(query map[string]string) ([]models.App, error) {
                     appsRefreshed++
-                    return []models.App{
-                        {Name: "limes", Guid: "limes-guid"},
-                        {Name: "lemons", Guid: "lemons-guid"},
-                    }, nil
+                    return validGuids(query)
                 },
                 "space-guid",
             )
@@ -134,15 +108,7 @@ var _ = Describe("Capi", func() {
         })
 
         It("handles concurrent reads and invalidations", func() {
-            c := internal.NewAppGuidCache(
-                func(query map[string]string) ([]models.App, error) {
-                    return []models.App{
-                        {Name: "limes", Guid: "limes-guid"},
-                        {Name: "lemons", Guid: "lemons-guid"},
-                    }, nil
-                },
-                "space-guid",
-            )
+            c := internal.NewAppGuidCache(validGuids, "space-guid")
             for i := 0; i < 50; i++ {
                 go func() { c.Get("lemons") }()
             }
@@ -154,14 +120,7 @@ var _ = Describe("Capi", func() {
 
     Describe("TryWithRefresh()", func() {
         It("runs the function with the corresponding app guid", func() {
-            c := internal.NewAppGuidCache(
-                func(query map[string]string) ([]models.App, error) {
-                    return []models.App{
-                        {Name: "lemons", Guid: "lemons-guid"},
-                    }, nil
-                },
-                "space-guid",
-            )
+            c := internal.NewAppGuidCache(validGuids, "space-guid")
 
             var called bool
             err := c.TryWithRefresh("lemons", func(appGuid string) error {
@@ -174,23 +133,23 @@ var _ = Describe("Capi", func() {
             Expect(called).To(BeTrue())
         })
 
-        It("retries if the function errors", func() {
-            var cacheCallCount int
-            c := internal.NewAppGuidCache(
-                func(query map[string]string) ([]models.App, error) {
-                    cacheCallCount++
-                    if cacheCallCount == 1 {
-                        return []models.App{
-                            {Name: "lemons", Guid: "wrong-lemons-guid"},
-                        }, nil
-                    }
+        It("retries if the function errors with a 404", func() {
+            c := internal.NewAppGuidCache(validGuidAfterRefresh(), "space-guid")
 
-                    return []models.App{
-                        {Name: "lemons", Guid: "lemons-guid"},
-                    }, nil
-                },
-                "space-guid",
-            )
+            var appGuids []string
+            err := c.TryWithRefresh("lemons", func(appGuid string) error {
+                appGuids = append(appGuids, appGuid)
+                return &internal.CapiError{
+                    ResponseCode: http.StatusNotFound,
+                }
+            })
+
+            Expect(err).To(HaveOccurred())
+            Expect(appGuids).To(ConsistOf("wrong-lemons-guid", "lemons-guid"))
+        })
+
+        It("does not retry if the function errors with non 404", func() {
+            c := internal.NewAppGuidCache(validGuidAfterRefresh(), "space-guid")
 
             var appGuids []string
             err := c.TryWithRefresh("lemons", func(appGuid string) error {
@@ -199,7 +158,7 @@ var _ = Describe("Capi", func() {
             })
 
             Expect(err).To(HaveOccurred())
-            Expect(appGuids).To(ConsistOf("wrong-lemons-guid", "lemons-guid"))
+            Expect(appGuids).To(ConsistOf("wrong-lemons-guid"))
         })
 
         It("returns an error if app guids can't be fetched", func() {
@@ -219,3 +178,28 @@ var _ = Describe("Capi", func() {
         })
     })
 })
+
+var validGuids = func(query map[string]string) ([]models.App, error) {
+    Expect(query).To(HaveKeyWithValue("space_guids", "space-guid"))
+
+    return []models.App{
+        {Name: "limes", Guid: "limes-guid"},
+        {Name: "lemons", Guid: "lemons-guid"},
+    }, nil
+}
+
+func validGuidAfterRefresh() func(query map[string]string) ([]models.App, error) {
+    cacheCallCount := 0
+    return func(query map[string]string) ([]models.App, error) {
+        cacheCallCount++
+        if cacheCallCount == 1 {
+            return []models.App{
+                {Name: "lemons", Guid: "wrong-lemons-guid"},
+            }, nil
+        }
+
+        return []models.App{
+            {Name: "lemons", Guid: "lemons-guid"},
+        }, nil
+    }
+}

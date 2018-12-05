@@ -10,7 +10,7 @@ import (
 )
 
 type capiRequestor interface {
-    Do(method, path string, body string, v interface{}, opts ...models.HeaderOption) error
+    Do(method, path string, body string, v interface{}, opts ...models.HeaderOption) *CapiError
     GetPagedResources(path string, v Accumulator, opts ...models.HeaderOption) error
 }
 

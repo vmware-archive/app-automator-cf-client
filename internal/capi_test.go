@@ -213,8 +213,8 @@ func newMockCapiGetter(get func(path string, v internal.Accumulator, opts ...mod
     return &mockCapiRequestor{get: get}
 }
 
-func (d *mockCapiRequestor) Do(method, path string, body string, v interface{}, opts ...models.HeaderOption) error {
-    return d.do(method, path, body, v, opts...)
+func (d *mockCapiRequestor) Do(method, path string, body string, v interface{}, opts ...models.HeaderOption) *internal.CapiError {
+    return internal.BuildCapiError(d.do(method, path, body, v, opts...))
 }
 
 func (d *mockCapiRequestor) GetPagedResources(path string, v internal.Accumulator, opts ...models.HeaderOption) error {
