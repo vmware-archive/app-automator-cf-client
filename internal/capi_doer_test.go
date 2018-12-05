@@ -118,17 +118,19 @@ var _ = Describe("CapiDoer", func() {
 
                 err := client.Do(http.MethodGet, "/v2/lemons", "I want lemons", nil)
                 Expect(err).To(HaveOccurred())
-                Expect(err.ResponseCode).To(respCodeMatcher)
+
+                capiErr, _ := err.(*internal.CapiError)
+                Expect(capiErr).To(respCodeMatcher)
             },
             Entry("httpClient errors", func(tc *testContext) {
                 tc.httpClient.Err = errors.New("expected error")
-            }, BeZero()),
+            }, BeNil()),
             Entry("request returns unexpected status", func(tc *testContext) {
                 tc.httpClient.Status = http.StatusConflict
-            }, Equal(http.StatusConflict)),
+            }, PointTo(MatchFields(IgnoreExtras, Fields{"ResponseCode": Equal(http.StatusConflict)}))),
             Entry("get token returns an error", func(tc *testContext) {
                 tc.getTokenErr = errors.New("expected error")
-            }, BeZero()),
+            }, BeNil()),
         )
     })
 

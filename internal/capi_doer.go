@@ -26,19 +26,19 @@ func NewCapiDoer(httpClient httpClient, capiUrl string, tokenGetter tokenGetter)
     }
 }
 
-func (c *CapiDoer) Do(method, path, body string, v interface{}, opts ...models.HeaderOption) *CapiError {
+func (c *CapiDoer) Do(method, path, body string, v interface{}, opts ...models.HeaderOption) error {
     return c.doUrl(method, c.capiUrl+path, body, v, opts...)
 }
 
-func (c *CapiDoer) doUrl(method, url, body string, v interface{}, opts ...models.HeaderOption) *CapiError {
+func (c *CapiDoer) doUrl(method, url, body string, v interface{}, opts ...models.HeaderOption) error {
     req, err := c.buildReq(method, url, body, opts...)
     if err != nil {
-        return BuildCapiError(err)
+        return err
     }
 
     resp, err := c.httpClient.Do(req)
     if err != nil {
-        return BuildCapiError(err)
+        return err
     }
     defer resp.Body.Close()
 
@@ -51,7 +51,7 @@ func (c *CapiDoer) doUrl(method, url, body string, v interface{}, opts ...models
     }
 
     if v != nil {
-        return BuildCapiError(json.NewDecoder(resp.Body).Decode(v))
+        return json.NewDecoder(resp.Body).Decode(v)
     }
 
     return nil
@@ -148,14 +148,4 @@ func (e *CapiError) Error() string {
         return ""
     }
     return e.message
-}
-
-func BuildCapiError(err error) *CapiError {
-    if err == nil {
-        return nil
-    }
-
-    return &CapiError{
-        message: err.Error(),
-    }
 }
