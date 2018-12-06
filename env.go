@@ -69,7 +69,7 @@ func LoadEnv() environment {
 
 func getUserProvidedCredentials(userProvided []userProvided) (map[string]string, bool) {
     for _, service := range userProvided {
-        if service.InstanceName == "pvtl_app_automation_credentials" {
+        if service.InstanceName == "pvtl-app-automator-credentials" {
             return service.Credentials, true
         }
     }
