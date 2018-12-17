@@ -108,46 +108,6 @@ var _ = Describe("Client", func() {
             Expect(task.Guid).To(Equal("task-guid"))
         })
 
-        It("defaults memory to 10M if not set", func() {
-            capi := &mockCapi{
-                apps: []models.App{{Guid: "app-guid"}},
-            }
-            c := client.Client{
-                Oauth:        &mockOauth{},
-                Capi:         capi,
-                AppGuidCache: &mockAppGuidCache{},
-            }
-
-            _, err := c.CreateTask("app-guid", "echo test", models.TaskConfig{
-                Name:        "lemons",
-                DiskInMB:    7,
-                MemoryInMB:  0,
-                DropletGUID: "droplet-guid",
-            })
-            Expect(err).ToNot(HaveOccurred())
-            Expect(capi.taskCfg.MemoryInMB).To(BeEquivalentTo(10))
-        })
-
-        It("defaults disk to 20M if not set", func() {
-            capi := &mockCapi{
-                apps: []models.App{{Guid: "app-guid"}},
-            }
-            c := client.Client{
-                Oauth:        &mockOauth{},
-                Capi:         capi,
-                AppGuidCache: &mockAppGuidCache{},
-            }
-
-            _, err := c.CreateTask("app-guid", "echo test", models.TaskConfig{
-                Name:        "lemons",
-                DiskInMB:    0,
-                MemoryInMB:  7,
-                DropletGUID: "droplet-guid",
-            })
-            Expect(err).ToNot(HaveOccurred())
-            Expect(capi.taskCfg.DiskInMB).To(BeEquivalentTo(20))
-        })
-
         It("sets a reasonable task name if not provided", func() {
             capi := &mockCapi{
                 apps: []models.App{{Guid: "app-guid"}},

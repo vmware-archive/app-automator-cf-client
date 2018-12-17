@@ -10,9 +10,6 @@ import (
 )
 
 const (
-    defaultTaskMemory = 10
-    defaultTaskDisk   = 20
-
     defaultProcessType = "web"
 )
 
@@ -116,13 +113,6 @@ func (c *Client) Process(appName, processType string) (models.Process, error) {
 }
 
 func (c *Client) CreateTask(appName, command string, cfg models.TaskConfig, opts ...models.HeaderOption) (models.Task, error) {
-    if cfg.MemoryInMB == 0 {
-        cfg.MemoryInMB = defaultTaskMemory
-    }
-
-    if cfg.DiskInMB == 0 {
-        cfg.DiskInMB = defaultTaskDisk
-    }
     if cfg.Name == "" {
         cfg.Name = command
     }
